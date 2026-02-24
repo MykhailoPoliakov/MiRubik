@@ -6,10 +6,10 @@ import copy
 
 # globals
 var = {'active' : True, 'analytic' : False, 'animation' : [[],0,''], 'solid' : True,
-       'mouse_lock' : '', 'silent_mode' : False,
+       'mouse_lock' : '', 'silent_mode' : False, 'remember' : '',
        'dir_check' : '', 'out_text' : '','shuffle' : '', 'mode' : 'menu', 'mode_anim' : ['',0]}
 
-anim = {'menu' : 0}
+anim = {'menu' : 0, 'win_fade' : 0}
 cord_to_index = {'x' : (1,2), 'y' : (0,2), 'z' : (0,1)}
 blocks_x = ['112', '122', '132', '232', '332', '322', '312', '212', '222']
 blocks_y = ['121', '122', '123', '223', '323', '322', '321', '221', '222']
@@ -19,8 +19,8 @@ all_colors = ({
         'red': [(153, 0, 0)],
         'green': [(0, 102, 0)],
         'blue': [(0, 76, 153)],
-        'yellow': [(204, 204, 0)],
-        'orange': [(204, 102, 0)],
+        'yellow': [(204, 102, 0)],
+        'orange': [(204, 204, 0)],
         'white': [(255, 229, 204)],
         'gray': [(50, 50, 50)], },
     {
@@ -61,6 +61,20 @@ def basic_animation(lock_word, if_const, if_plus, else_minus):
 def sound(track):
     if not var['silent_mode']:
         sounds[track].play()
+
+def rubik_solved():
+    for key in world.rubik:
+        if world.rubik[key].rotation != cent_p.rotation:
+            return False
+    return True
+
+""" Output Functions """
+def ingame_info(message):
+    _font = pygame.font.Font(None, 40)
+    for _num, line in enumerate(message):
+        _text = _font.render(line, True, (255, 255, 255))
+        screen.blit(_text, (15, 5 + _num * 35))
+
 
 """ Rubik Rotation Functions """
 def rubik_rotation(rotation_cord,_blocks,_index,_cof):
@@ -182,6 +196,8 @@ class World:
         self.rubik = {}
         self.points_copy = None
         self.rubik_copy = None
+
+        self.solved = False
 
     def save_data(self):
         self.rubik_copy = copy.deepcopy(self.rubik)
@@ -308,7 +324,6 @@ class ObjectChanger:
         self.size = 1
         self.polygons = polygons
 
-
     def reset(self):
         self.rotation = [0, 0, 0]
 
@@ -329,6 +344,38 @@ class ObjectChanger:
                 world.points[self.name][_point][index] *= round(1 + add_size / 100,2)
         self.size *= 1 + add_size / 100
         var['active'] = True
+
+class Timer:
+    def __init__(self):
+        self.running = False
+        self.__start_time = 0
+        self.__time = 0
+
+    def start(self):
+        self.__start_time = pygame.time.get_ticks()
+        self.running = True
+
+    def update(self):
+        self.__time = pygame.time.get_ticks() - self.__start_time
+
+    def stop(self):
+        self.running = False
+
+    def reset(self):
+        self.running = False
+        self.__start_time = 0
+        self.__time = 0
+
+    @property
+    def time(self):
+        if self.__time > 0:
+            human_time = self.__time // 1000
+            minutes = human_time // 60
+            seconds = human_time % 60
+            milliseconds = (self.__time % 1000) // 10
+            return f"{minutes:02}:{seconds:02}:{milliseconds:02}"
+        return "00:00:00"
+
 
 
 """Objects"""
@@ -401,6 +448,9 @@ camera1 = CameraChanger('Camera 1',(20,45))
 camera2 = CameraChanger('Camera 2',(20,45))
 camera = world.all_cameras[0]
 
+# timer
+timer = Timer()
+
 """ PyGame """
 
 pygame.init()
@@ -411,6 +461,7 @@ screen.fill(background_color)
 
 textures = {
     'fade'         : pygame.image.load(resource_path("textures/fade.png")).convert_alpha(),
+    'win_fade'     : pygame.image.load(resource_path("textures/win_fade.png")).convert_alpha(),
     'cosmos'       : pygame.image.load(resource_path("textures/cosmos.jpg")).convert_alpha(),
     'black'        : pygame.image.load(resource_path("textures/black.png")).convert_alpha(),
     'menu'         : pygame.image.load(resource_path("textures/menu.png")).convert_alpha(),
@@ -419,7 +470,9 @@ textures = {
     'sound_on'     : pygame.image.load(resource_path("textures/sound_on.png")).convert_alpha(),
 }
 textures['fade'] = pygame.transform.scale(textures['fade'], (1920, 1080))
+textures['win_fade'] = pygame.transform.scale(textures['win_fade'], (1920, 1080))
 textures['black'].set_alpha(60)
+textures['win_fade'].set_alpha(60)
 sounds = {
     'click'  : pygame.mixer.Sound("textures/click.wav"),
     'select' : pygame.mixer.Sound("textures/select.wav"),
@@ -443,6 +496,21 @@ world.save_data()
 running = True
 while running:
     """ BRAIN """
+    # timer update
+    world.solved = rubik_solved()
+    if timer.running and not world.solved:
+        timer.update()
+    # switches
+    if world.solved != var['remember']:
+        if world.solved or var['mode'] != 'game':
+            timer.stop()
+        else:
+            timer.reset()
+            timer.start()
+    # make a switch
+    var['remember'] = rubik_solved()
+
+
     # if shuffle mode
     if var['shuffle']:
         if not var['animation'][0]:
@@ -493,8 +561,8 @@ while running:
             if var['mode_anim'][1] > 90:
                 textures['black'].set_alpha(textures['black'].get_alpha() - 1)
 
-            if var['mode_anim'][1] > 100:
-                var['shuffle'] = 'slow'
+            #if var['mode_anim'][1] > 100:
+            #   var['shuffle'] = 'slow'
 
             if var['mode_anim'][1] > 150:
                 var['mode'] = 'game'
@@ -505,6 +573,8 @@ while running:
                 camera.rotation = list(camera.init_rotation)
                 var['active'] = True
                 textures['black'].set_alpha(60)
+                # start timer
+                timer.start()
 
     """ INPUT """
     keys = pygame.key.get_pressed()
@@ -520,6 +590,10 @@ while running:
         elif event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE:
             running = False
 
+        # for testing
+        elif event.type == pygame.KEYDOWN and event.key == pygame.K_i:
+            timer.start()
+
         # analytic mode
         elif event.type == pygame.KEYDOWN and event.key == pygame.K_F3:
             var['analytic'] = True if var['analytic'] == False else False
@@ -532,19 +606,25 @@ while running:
             var['solid'] = True if var['solid'] == False else False
             sound('select')
 
-        # game mode
+        # game mode (space)
         elif event.type == pygame.KEYDOWN and event.key == pygame.K_SPACE:
+            # start the game mode
             if var['mode'] == 'menu':
                 var['mode'] = 'start'
                 var['mode_anim'] = ['start', 0]
                 var['shuffle'] = 'fast'
                 var['active'] = True
-            else:
-                world.reset()
-                var['mode'] = 'menu'
-                center = [550, 540]
-                camera.size = 0.8
-            sound('select')
+                timer.reset()
+                sound('select')
+
+        # game mode no shuffle (c)
+        elif event.type == pygame.KEYDOWN and event.key == pygame.K_c:
+            if var['mode'] == 'menu':
+                var['mode'] = 'start'
+                var['mode_anim'] = ['start', 0]
+                var['active'] = True
+                timer.reset()
+                sound('select')
 
 
         if var['mode'] == 'game':
@@ -639,23 +719,28 @@ while running:
     # objects output render
     camera.render_polygon()
 
+
     # start menu
     if var['mode'] == 'menu':
-        font = pygame.font.Font(None, 90)
-        text = font.render(f"Play", True, (255, 255, 255))
-        screen.blit(text, (1500, 450))
+        font = pygame.font.Font(resource_path("textures/cosmo.otf"), 200)
+        text = font.render("PLaY", True, (255, 55, 55))
+        screen.blit(text, (1300, 450))
         camera.rotate(1,1)
         camera.rotate(0, 1)
         screen.blit(textures['black'], (0, 0))
+
 
     # start animation
     if var['mode'] == 'start':
         screen.blit(textures['black'], (0, 0))
 
+
     # in-game animation
     if var['mode'] == 'game':
-        basic_animation('menu', 90, 9, 3)
+
         # upper menu output
+        if not world.solved:
+            basic_animation('menu', 90, 9, 3)
         if anim['menu'] > 0:
             cords = (0, -90 + anim['menu'])
             screen.blit(textures['menu'], cords)
@@ -665,28 +750,40 @@ while running:
                 screen.blit(textures['left_button'], cords)
             if clicks['menu_exit'].collidepoint(mouse_pos):
                 screen.blit(textures['right_button'], cords)
+            font = pygame.font.Font(None, 80)
+            text = font.render(timer.time, True, (255, 255, 255))
+            screen.blit(text, (cords[0] + 1650, cords[1] + 25))
+
+        # if rubik is solved
+        if world.solved:
+            if anim['menu'] < 90:
+                anim['menu'] += 5
+            if anim['win_fade'] < 90:
+                anim['win_fade'] += 5
+            textures['win_fade'].set_alpha(anim['win_fade'])
+            screen.blit(textures['win_fade'], (0, 0))
+        elif anim['win_fade'] > 0:
+            textures['win_fade'].set_alpha(anim['win_fade'])
+            screen.blit(textures['win_fade'], (0, 0))
+            anim['win_fade'] -= 5
+
 
     # in-game info output
     if var['analytic']:
-        fps = int(clock.get_fps())
-        font = pygame.font.Font(None, 40)
-        messages = [
 
-        f'Fps : {fps}',
-        f'State : {'active' if var['active'] else 'passive'}',
-        f'last rubik rotation : {var['out_text']}'
-        f'' ,
-        f'Cameras : {[i.name for i in world.all_cameras]}',
-        f'Camera : {camera.name}',
-        f'Rotation : x {camera.rotation[0]:.0f}° y {camera.rotation[1]:.0f}°',
-        f'Size : {camera.size:.2f}',
-        f'Mode : {var["mode"]}',
-        f'{anim['menu']} {var['mouse_lock']}']
+        ingame_info([
+            f'Fps : {int(clock.get_fps())}',
+            f'State : {'active' if var['active'] else 'passive'}',
+            f'last rubik rotation : {var['out_text']}',
+            f'Cameras : {[i.name for i in world.all_cameras]}',
+            f'Camera : {camera.name}',
+            f'Rotation : x {camera.rotation[0]:.0f}° y {camera.rotation[1]:.0f}°',
+            f'Size : {camera.size:.2f}',
+            f'Mode : {var["mode"]}',
+            f'{anim['menu']} {var['mouse_lock']}',
+            f'{timer.time}'
+        ])
 
-
-        for num, message in enumerate(messages):
-            text = font.render(message, True, (255, 255, 255))
-            screen.blit(text, (15, 5 + num * 35))
 
     pygame.display.flip()
     clock.tick(60)
