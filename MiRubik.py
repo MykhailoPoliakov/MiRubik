@@ -157,7 +157,8 @@ def create_cube(_obj_name,points_offset, color_input):
         '1': [ 33.0, 33.0, 33.0], '2': [ 33.0,-33.0, 33.0],
         '3': [-33.0,-33.0, 33.0], '4': [-33.0, 33.0, 33.0],
         '5': [ 33.0, 33.0,-33.0], '6': [ 33.0,-33.0,-33.0],
-        '7': [-33.0,-33.0,-33.0], '8': [-33.0, 33.0,-33.0]}
+        '7': [-33.0,-33.0,-33.0], '8': [-33.0, 33.0,-33.0],
+    }
     for _point in cube_points:
         cube_points[_point][0] += points_offset[0]
         cube_points[_point][1] += points_offset[1]
@@ -196,7 +197,6 @@ class World:
         self.rubik = {}
         self.points_copy = None
         self.rubik_copy = None
-
         self.solved = False
 
     def save_data(self):
@@ -263,7 +263,6 @@ class CameraChanger:
                     if condition > _order[_num][1]:
                         return _order.insert(_num, content)
             return _order.append(content)
-
 
         self.order = []
         for _obj in world.all_objects:
@@ -462,13 +461,14 @@ screen.fill(background_color)
 textures = {
     'fade'         : pygame.image.load(resource_path("textures/fade.png")).convert_alpha(),
     'win_fade'     : pygame.image.load(resource_path("textures/win_fade.png")).convert_alpha(),
-    'cosmos'       : pygame.image.load(resource_path("textures/cosmos.jpg")).convert_alpha(),
+    'background'   : pygame.image.load(resource_path("textures/lake.jpg")).convert_alpha(),
     'black'        : pygame.image.load(resource_path("textures/black.png")).convert_alpha(),
     'menu'         : pygame.image.load(resource_path("textures/menu.png")).convert_alpha(),
     'left_button'  : pygame.image.load(resource_path("textures/left_button.png")).convert_alpha(),
     'right_button' : pygame.image.load(resource_path("textures/right_button.png")).convert_alpha(),
     'sound_on'     : pygame.image.load(resource_path("textures/sound_on.png")).convert_alpha(),
 }
+textures['background'] = pygame.transform.scale(textures['background'], (1920, 1080))
 textures['fade'] = pygame.transform.scale(textures['fade'], (1920, 1080))
 textures['win_fade'] = pygame.transform.scale(textures['win_fade'], (1920, 1080))
 textures['black'].set_alpha(60)
@@ -484,6 +484,10 @@ clicks = {
     'menu' : pygame.Rect(0, 0, 1920, 130),
     'menu_exit' : pygame.Rect(990, 0, 110, 100),
     'menu_sound' : pygame.Rect(830, 0, 110, 100),
+
+    'play' : pygame.Rect(0, 0, 1920, 130),
+    'inspect' : pygame.Rect(0, 0, 1920, 130),
+    'menu_restart' : pygame.Rect(830, 0, 110, 100),
 }
 
 var['mode'] = 'menu'
@@ -493,9 +497,17 @@ mouse_cords = center
 world.save_data()
 
 """ Main Cycle """
+
 running = True
 while running:
+
     """ BRAIN """
+
+    # objects re-render if action made
+    if var['active']:
+        var['active'] = False
+        camera.render()
+
     # timer update
     world.solved = rubik_solved()
     if timer.running and not world.solved:
@@ -510,7 +522,6 @@ while running:
     # make a switch
     var['remember'] = rubik_solved()
 
-
     # if shuffle mode
     if var['shuffle']:
         if not var['animation'][0]:
@@ -521,10 +532,6 @@ while running:
             letter1 = random.choice(['l', 'r', 'u', 'd'])
             var['animation'] = [[button1.name, letter1], 0,'']
 
-    # objects re-render if action made
-    if var['active']:
-        var['active'] = False
-        camera.render()
 
     # calculating blocks to move and the direction
     if var['animation'][0] and not var['animation'][2]:
@@ -577,7 +584,7 @@ while running:
                 timer.start()
 
     """ INPUT """
-    keys = pygame.key.get_pressed()
+
     mouse_keys = pygame.mouse.get_pressed()
     mouse_pos = pygame.mouse.get_pos()
 
@@ -590,44 +597,46 @@ while running:
         elif event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE:
             running = False
 
-        # for testing
-        elif event.type == pygame.KEYDOWN and event.key == pygame.K_i:
-            timer.start()
+        # rubik reset (testing)
+        elif event.type == pygame.KEYDOWN and event.key == pygame.K_h:
+            world.reset()
 
         # analytic mode
         elif event.type == pygame.KEYDOWN and event.key == pygame.K_F3:
             var['analytic'] = True if var['analytic'] == False else False
             sound('select')
 
-        elif event.type == pygame.KEYDOWN and event.key == pygame.K_h:
-            world.reset()
-
+        # not solid mode
         elif event.type == pygame.KEYDOWN and event.key == pygame.K_F4:
             var['solid'] = True if var['solid'] == False else False
             sound('select')
 
-        # game mode (space)
-        elif event.type == pygame.KEYDOWN and event.key == pygame.K_SPACE:
-            # start the game mode
-            if var['mode'] == 'menu':
-                var['mode'] = 'start'
-                var['mode_anim'] = ['start', 0]
-                var['shuffle'] = 'fast'
-                var['active'] = True
-                timer.reset()
-                sound('select')
 
-        # game mode no shuffle (c)
-        elif event.type == pygame.KEYDOWN and event.key == pygame.K_c:
-            if var['mode'] == 'menu':
-                var['mode'] = 'start'
-                var['mode_anim'] = ['start', 0]
-                var['active'] = True
-                timer.reset()
-                sound('select')
+        if var['mode'] == 'menu':
+
+            # game mode (space)
+            if event.type == pygame.KEYDOWN and event.key == pygame.K_SPACE:
+                # start the game mode
+                if var['mode'] == 'menu':
+                    var['mode'] = 'start'
+                    var['mode_anim'] = ['start', 0]
+                    var['shuffle'] = 'fast'
+                    var['active'] = True
+                    timer.reset()
+                    sound('select')
+
+            # game mode no shuffle (c)
+            elif event.type == pygame.KEYDOWN and event.key == pygame.K_c:
+                if var['mode'] == 'menu':
+                    var['mode'] = 'start'
+                    var['mode_anim'] = ['start', 0]
+                    var['active'] = True
+                    timer.reset()
+                    sound('select')
 
 
         if var['mode'] == 'game':
+
             if clicks['menu'].collidepoint(mouse_pos) and not (event.type == pygame.MOUSEMOTION and mouse_keys[2]):
                 var['mouse_lock'] = 'menu'
             if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1 and clicks['menu_exit'].collidepoint(mouse_pos):
@@ -637,16 +646,8 @@ while running:
                 camera.size = 0.8
                 sound('select')
             if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1 and clicks['menu_sound'].collidepoint(mouse_pos):
-                if var['silent_mode'] == False:
-                    print('1')
-                    var['silent_mode'] = True
-                    pygame.mixer.pause()
-                    pygame.mixer.music.pause()
-                else:
-                    var['silent_mode'] = False
-                    pygame.mixer.unpause()
-                    pygame.mixer.music.unpause()
-                sound('select')
+                var['silent_mode'] = not var['silent_mode']
+                pygame.mixer.music.pause() if var['silent_mode'] else pygame.mixer.music.unpause()
 
 
             # camera sizing with mouse
@@ -712,8 +713,9 @@ while running:
                     var['out_text'] = var['animation'] # for visualization
 
     """ OUTPUT """
+
     # background
-    screen.blit(textures['cosmos'], (0, 0))
+    screen.blit(textures['background'], (0, 0))
     screen.blit(textures['fade'], (0, 0))
 
     # objects output render
@@ -722,8 +724,8 @@ while running:
 
     # start menu
     if var['mode'] == 'menu':
-        font = pygame.font.Font(resource_path("textures/cosmo.otf"), 200)
-        text = font.render("PLaY", True, (255, 55, 55))
+        font = pygame.font.Font(resource_path("textures/cosmo.otf"), 170)
+        text = font.render("play", True, (255, 255, 255))
         screen.blit(text, (1300, 450))
         camera.rotate(1,1)
         camera.rotate(0, 1)
@@ -780,8 +782,8 @@ while running:
             f'Rotation : x {camera.rotation[0]:.0f}° y {camera.rotation[1]:.0f}°',
             f'Size : {camera.size:.2f}',
             f'Mode : {var["mode"]}',
-            f'{anim['menu']} {var['mouse_lock']}',
-            f'{timer.time}'
+            f'Top menu anim. :{anim['menu']} {var['mouse_lock']}',
+            f'Timer : {timer.time}'
         ])
 
 
