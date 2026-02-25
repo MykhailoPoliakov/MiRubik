@@ -3,14 +3,16 @@ import math
 import random
 import sys, os
 import copy
+import json
 
 # globals
 var = {'active' : True, 'analytic' : False, 'animation' : [[],0,''], 'solid' : True,
        'mouse_lock' : '', 'silent_mode' : False, 'remember' : '',
-       'dir_check' : '', 'out_text' : '','shuffle' : '', 'mode' : 'menu', 'mode_anim' : ['',0]}
+       'motion_start' : '', 'out_text' : '','shuffle' : '', 'mode' : 'menu', 'mode_anim' : ['',0]}
 
-anim = {'menu' : 0, 'win_fade' : 0}
+anim = {'menu' : 0, 'win_fade' : 0, 'restart' : 0,}
 cord_to_index = {'x' : (1,2), 'y' : (0,2), 'z' : (0,1)}
+pairs_to_cords = {(1,2) :0 , (0,2) : 1, (0,1) : 2}
 blocks_x = ['112', '122', '132', '232', '332', '322', '312', '212', '222']
 blocks_y = ['121', '122', '123', '223', '323', '322', '321', '221', '222']
 blocks_z = ['211', '221', '231', '232', '233', '223', '213', '212', '222']
@@ -40,11 +42,13 @@ for group_colors in all_colors:
 
 
 
-""" Textures """
+""" Texture Functions """
+
 def resource_path(relative_path):
     if hasattr(sys, '_MEIPASS'):
         return os.path.join(sys._MEIPASS, relative_path)
     return relative_path
+
 
 """ Basic Functions """
 def angle_calc(_radius, _cord_0, _cord_1):
@@ -59,7 +63,7 @@ def basic_animation(lock_word, if_const, if_plus, else_minus):
         anim[lock_word] -= else_minus
 
 def sound(track):
-    if not var['silent_mode']:
+    if main_json.data['sound']:
         sounds[track].play()
 
 def rubik_solved():
@@ -77,7 +81,8 @@ def ingame_info(message):
 
 
 """ Rubik Rotation Functions """
-def rubik_rotation(rotation_cord,_blocks,_index,_cof):
+def rubik_rotation():
+    _blocks, index, cof = var['animation'][3]
     # rotation animation
     if var['animation'][1] < 90:
         if var['shuffle'] == 'fast':
@@ -85,12 +90,12 @@ def rubik_rotation(rotation_cord,_blocks,_index,_cof):
         else:
             _add_ang = 10 if 10 <= var['animation'][1] <= 70 else 2
         for _obj_location in _blocks:
-            world.rubik[_obj_location].rotate(_index, _add_ang * _cof)
+            world.rubik[_obj_location].rotate( index, _add_ang * cof)
         var['animation'][1] += _add_ang
     else:
         # rewriting position
         _blocks.pop(-1)
-        off_blocks = _blocks[2:] + _blocks[:2] if rotation_cord[1] in ['d', 'r'] else _blocks[-2:] + _blocks[:-2]
+        off_blocks = _blocks[2:] + _blocks[:2] if var['animation'][2][1] in ['d', 'r'] else _blocks[-2:] + _blocks[:-2]
         place_save = []
         for pl in _blocks:  place_save.append(world.rubik[pl])
         for pl in off_blocks:  world.rubik[pl] = place_save.pop(0)
@@ -130,9 +135,6 @@ def rubik_calculation():
     else:
         var['animation'] = [[], 0, '']
         return
-    # rotation sound
-    if var['mode'] == 'game':
-        sound('click')
     # if action was recognized
     new_blocks = blocks_.copy()
     if coef:
@@ -140,9 +142,9 @@ def rubik_calculation():
         for i in range(9):
             new_blocks[i] = str(int(blocks_[i]) + coef[0] * mult)
     var['animation'][2] = direction
-    i_index = cord_to_index[var['animation'][2][0]]
-    _cof = -1 if var['animation'][2][1] in ['u', 'r'] else 1
-    var['animation'].append([new_blocks, i_index, _cof])
+    index = cord_to_index[var['animation'][2][0]]
+    cof = -1 if var['animation'][2][1] in ['u', 'r'] else 1
+    var['animation'].append([new_blocks, index, cof])
 
 """ Objects Creation Functions """
 def create_cube(_obj_name,points_offset, color_input):
@@ -186,6 +188,40 @@ def create_button(_obj_name,points_offset, direction):
         _points[_point][index[2]] += 100 * cof
     return [_obj_name,colored,_points]
 
+""" Work With Json File """
+
+class Json:
+    def __init__(self, file_name, default_dict):
+        self.__name = "MiRubik"
+        self.__file_name = file_name
+        self.__default_dict = default_dict
+
+        # get user data from the file
+        self.data = self.__get_data
+        self.update_data()
+
+
+    @property
+    def __path(self):
+        save_dir = os.path.join(os.getenv("LOCALAPPDATA"), self.__name)
+        os.makedirs(save_dir, exist_ok=True)
+        return os.path.join(save_dir, self.__file_name)
+
+    @property
+    def __get_data(self):
+        try:
+            with open(self.__path, "r", encoding="utf-8") as json_file:
+                return json.load(json_file)
+        except (FileNotFoundError, json.JSONDecodeError):
+            return self.__default_dict
+
+    def update_data(self):
+        with open(self.__path, "w", encoding="utf-8") as _json_file:
+            json.dump(self.data, _json_file, ensure_ascii=False, indent=4, sort_keys=True)
+
+# object
+main_json = Json("user_data.json",{'sound' : True, 'best_time' : [None,None,None] })
+
 """ World Class """
 class World:
     def __init__(self):
@@ -206,8 +242,9 @@ class World:
     def reset(self):
         for camera_ in self.all_cameras:
             camera_.reset()
-        for object_ in self.all_cameras:
+        for object_ in self.all_objects:
             object_.reset()
+            print(1)
         self.rubik = copy.deepcopy(self.rubik_copy)
         self.points = copy.deepcopy(self.points_copy)
         var['active'] = True
@@ -325,6 +362,7 @@ class ObjectChanger:
 
     def reset(self):
         self.rotation = [0, 0, 0]
+        print('1')
 
     def rotate(self,index, _add_ang):
         for _point in world.points[self.name]:
@@ -334,7 +372,11 @@ class ObjectChanger:
                                world.points[self.name][_point][index[1]]) - _add_ang
             world.points[self.name][_point][index[0]] = round(radius * math.sin(math.radians(angle)), 2)
             world.points[self.name][_point][index[1]] = round(radius * math.cos(math.radians(angle)), 2)
-        self.rotation[1] += _add_ang
+        self.rotation[pairs_to_cords[index]] -= _add_ang
+        if self.rotation[pairs_to_cords[index]] >= 360:
+            self.rotation[pairs_to_cords[index]] -= 360
+        if self.rotation[pairs_to_cords[index]] < 0:
+            self.rotation[pairs_to_cords[index]] += 360
         var['active'] = True
 
     def resize(self,add_size):
@@ -466,7 +508,9 @@ textures = {
     'menu'         : pygame.image.load(resource_path("textures/menu.png")).convert_alpha(),
     'left_button'  : pygame.image.load(resource_path("textures/left_button.png")).convert_alpha(),
     'right_button' : pygame.image.load(resource_path("textures/right_button.png")).convert_alpha(),
+    'corner_button': pygame.image.load(resource_path("textures/corner_button.png")).convert_alpha(),
     'sound_on'     : pygame.image.load(resource_path("textures/sound_on.png")).convert_alpha(),
+    'sound'        : pygame.image.load(resource_path("textures/sound.png")).convert_alpha(),
 }
 textures['background'] = pygame.transform.scale(textures['background'], (1920, 1080))
 textures['fade'] = pygame.transform.scale(textures['fade'], (1920, 1080))
@@ -479,15 +523,18 @@ sounds = {
 }
 pygame.mixer.music.load("textures/cosmo.mp3")
 pygame.mixer.music.play(-1)
+if not main_json.data['sound']:
+    pygame.mixer.music.pause()
 
 clicks = {
     'menu' : pygame.Rect(0, 0, 1920, 130),
     'menu_exit' : pygame.Rect(990, 0, 110, 100),
-    'menu_sound' : pygame.Rect(830, 0, 110, 100),
+    'menu_sound' : pygame.Rect(15, 0, 110, 100),
 
-    'play' : pygame.Rect(0, 0, 1920, 130),
-    'inspect' : pygame.Rect(0, 0, 1920, 130),
     'menu_restart' : pygame.Rect(830, 0, 110, 100),
+    'play' : pygame.Rect(1300, 350, 300, 130),
+    'inspect' : pygame.Rect(1315, 600, 300, 130),
+
 }
 
 var['mode'] = 'menu'
@@ -514,13 +561,28 @@ while running:
         timer.update()
     # switches
     if world.solved != var['remember']:
-        if world.solved or var['mode'] != 'game':
+        if world.solved or var['mode'] != 'game' or var['game_type'] != 'play':
             timer.stop()
         else:
             timer.reset()
             timer.start()
     # make a switch
     var['remember'] = rubik_solved()
+
+    # rubik reshuffling
+    if anim['restart']:
+        if anim['restart'] == 200:
+            final_camera_rot_x = (camera.init_rotation[0] - camera.rotation[0] + 360) / 200
+            final_camera_rot_y = (camera.init_rotation[1] - camera.rotation[1] + 360) / 200
+        anim['restart'] -= 1
+        var['shuffle'] = 'fast'
+        camera.rotate(0, final_camera_rot_x)
+        camera.rotate(1, final_camera_rot_y)
+        timer.reset()
+        if anim['restart'] == 1:
+            anim['restart'] = 0
+            var['shuffle'] = ''
+            timer.start()
 
     # if shuffle mode
     if var['shuffle']:
@@ -534,13 +596,14 @@ while running:
 
 
     # calculating blocks to move and the direction
-    if var['animation'][0] and not var['animation'][2]:
-        var['dir_check'] = ''
-        rubik_calculation()
+    if var['animation'][0]:
+        # rotation animation
+        if not var['animation'][2]:
+            rubik_calculation()
+        # rotation
+        if var['animation'][2]:
+            rubik_rotation()
 
-    # rotation
-    if var['animation'][2]:
-        rubik_rotation(var['animation'][2],*var['animation'][3])
 
     # start animation
     if var['mode_anim'][0] == 'start':
@@ -569,7 +632,7 @@ while running:
                 textures['black'].set_alpha(textures['black'].get_alpha() - 1)
 
             #if var['mode_anim'][1] > 100:
-            #   var['shuffle'] = 'slow'
+            #  var['shuffle'] = 'slow'
 
             if var['mode_anim'][1] > 150:
                 var['mode'] = 'game'
@@ -581,7 +644,12 @@ while running:
                 var['active'] = True
                 textures['black'].set_alpha(60)
                 # start timer
-                timer.start()
+                if var['game_type'] == 'play':
+                    timer.start()
+
+    if var['mode'] == 'menu':
+        camera.rotate(1, 1)
+        camera.rotate(0, 1)
 
     """ INPUT """
 
@@ -597,120 +665,143 @@ while running:
         elif event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE:
             running = False
 
-        # rubik reset (testing)
-        elif event.type == pygame.KEYDOWN and event.key == pygame.K_h:
-            world.reset()
-
-        # analytic mode
+        # analytic mode (f3)
         elif event.type == pygame.KEYDOWN and event.key == pygame.K_F3:
             var['analytic'] = True if var['analytic'] == False else False
             sound('select')
 
-        # not solid mode
+        # not solid mode (f4)
         elif event.type == pygame.KEYDOWN and event.key == pygame.K_F4:
             var['solid'] = True if var['solid'] == False else False
             sound('select')
 
+        # silent mode
+        if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1 and clicks['menu_sound'].collidepoint(mouse_pos):
+            # updating the value
+            main_json.data['sound'] = not main_json.data['sound']
+            print(main_json.data['sound'])
+            main_json.update_data()
+            # turning on/off silent mode
+            pygame.mixer.music.unpause() if main_json.data['sound'] else pygame.mixer.music.pause()
 
-        if var['mode'] == 'menu':
 
-            # game mode (space)
-            if event.type == pygame.KEYDOWN and event.key == pygame.K_SPACE:
-                # start the game mode
-                if var['mode'] == 'menu':
+        match var['mode']:
+
+            case 'menu':
+
+                # game mode (space)
+                if event.type == pygame.MOUSEBUTTONDOWN and clicks['play'].collidepoint(mouse_pos):
+                    # start the game
                     var['mode'] = 'start'
+                    var['game_type'] = 'play'
                     var['mode_anim'] = ['start', 0]
                     var['shuffle'] = 'fast'
                     var['active'] = True
                     timer.reset()
                     sound('select')
 
-            # game mode no shuffle (c)
-            elif event.type == pygame.KEYDOWN and event.key == pygame.K_c:
-                if var['mode'] == 'menu':
+                # game mode no shuffle (c)
+                elif event.type == pygame.MOUSEBUTTONDOWN and clicks['inspect'].collidepoint(mouse_pos):
+                    # start the game
                     var['mode'] = 'start'
+                    var['game_type'] = 'inspect'
                     var['mode_anim'] = ['start', 0]
                     var['active'] = True
                     timer.reset()
                     sound('select')
 
 
-        if var['mode'] == 'game':
+            case 'game':
 
-            if clicks['menu'].collidepoint(mouse_pos) and not (event.type == pygame.MOUSEMOTION and mouse_keys[2]):
-                var['mouse_lock'] = 'menu'
-            if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1 and clicks['menu_exit'].collidepoint(mouse_pos):
-                world.reset()
-                var['mode'] = 'menu'
-                center = [550, 540]
-                camera.size = 0.8
-                sound('select')
-            if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1 and clicks['menu_sound'].collidepoint(mouse_pos):
-                var['silent_mode'] = not var['silent_mode']
-                pygame.mixer.music.pause() if var['silent_mode'] else pygame.mixer.music.unpause()
+                if clicks['menu'].collidepoint(mouse_pos) and not (event.type == pygame.MOUSEMOTION and mouse_keys[2]):
+                    var['mouse_lock'] = 'menu'
+                    sound('select')
+
+                if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1 and clicks['menu_exit'].collidepoint(mouse_pos):
+                    world.reset()
+                    var['mode'] = 'menu'
+                    center = [550, 540]
+                    camera.size = 0.8
+                    sound('select')
+
+                if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1 and \
+                clicks['menu_restart'].collidepoint(mouse_pos) and not anim['restart']:
+                    anim['restart'] = 200
+                    var['game_type'] = 'play'
+                    sound('select')
 
 
-            # camera sizing with mouse
-            if event.type == pygame.MOUSEWHEEL:
-                if (camera.size < 2 or event.y < 0) and (camera.size > 0.3 or event.y > 0):
-                    camera.resize(event.y * 5)
-            # camera rotation with mouse and cursor control
-            elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 3:
-                pygame.mouse.set_visible(False) ; pygame.event.set_grab(True)
-                mouse_cords = pygame.mouse.get_pos()
-            elif event.type == pygame.MOUSEBUTTONUP and event.button == 3:
-                pygame.mouse.set_visible(True) ; pygame.event.set_grab(False)
-                pygame.mouse.set_pos(mouse_cords)
-            elif event.type == pygame.MOUSEMOTION and mouse_keys[2]:
-                dx, dy = event.rel
-                if (camera.rotation[0] < 85 or dy < 0) and (camera.rotation[0] > -85 or dy > 0):
-                    camera.rotate(0, dy / 20)
-                camera.rotate(1, -dx / 20)
+                # camera sizing with mouse
+                if event.type == pygame.MOUSEWHEEL:
+                    if (camera.size < 2 or event.y < 0) and (camera.size > 0.3 or event.y > 0):
+                        camera.resize(event.y * 5)
+                # camera rotation with mouse and cursor control
+                elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 3:
+                    pygame.mouse.set_visible(False) ; pygame.event.set_grab(True)
+                    mouse_cords = pygame.mouse.get_pos()
+                elif event.type == pygame.MOUSEBUTTONUP and event.button == 3:
+                    pygame.mouse.set_visible(True) ; pygame.event.set_grab(False)
+                    pygame.mouse.set_pos(mouse_cords)
+                elif event.type == pygame.MOUSEMOTION and mouse_keys[2]:
+                    dx, dy = event.rel
+                    if (camera.rotation[0] < 85 or dy < 0) and (camera.rotation[0] > -85 or dy > 0):
+                        camera.rotate(0, dy / 20)
+                    camera.rotate(1, -dx / 20)
 
-            # shuffle mode activation
-            elif event.type == pygame.KEYDOWN and event.key == pygame.K_b:
-                var['shuffle'] = 'fast' if var['shuffle'] != 'fast' else ''
+                # shuffle mode activation
+                elif event.type == pygame.KEYDOWN and event.key == pygame.K_b:
+                    var['shuffle'] = 'fast' if var['shuffle'] != 'fast' else ''
 
-            # camera change
-            elif event.type == pygame.KEYDOWN and event.key == pygame.K_k:
-                _index = world.all_cameras.index(camera)
-                camera = world.all_cameras[_index + 1] if _index < len(world.all_cameras) - 1 else world.all_cameras[0]
-                var['active'] = True
+                # camera change
+                elif event.type == pygame.KEYDOWN and event.key == pygame.K_k:
+                    _index = world.all_cameras.index(camera)
+                    camera = world.all_cameras[_index + 1] if _index < len(world.all_cameras) - 1 else world.all_cameras[0]
+                    var['active'] = True
 
-            # informating if any button was activated
-            elif not var['animation'][0]:
-                if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1 and not mouse_keys[2]:
-                    new_list = []
-                    for _object in camera.order:
-                        if _object[0].name[:6] == 'button' and _object[1] > 0:
-                            for point in list(_object[3][('1', '2', '3', '4')]['render_points']):
-                                new_list.append((point[0], point[1]))
-                            button_name = _object[0].name
-                            # mask creation
-                            surf = pygame.Surface((1920, 1080), pygame.SRCALPHA)
-                            pygame.draw.polygon(surf, (255, 255, 255), new_list)
-                            mask = pygame.mask.from_surface(surf)
-                            mx, my = pygame.mouse.get_pos()
-                            # check if click was in the polygon
-                            if mask.get_at((mx, my)):
-                                var['dir_check'] = button_name
-                                dx, dy = 0,0
-                                break
-                if var['dir_check']:
-                    if event.type == pygame.MOUSEMOTION and mouse_keys[0]:
-                        dx += event.rel[0] ; dy += event.rel[1]
-                        # inversion of mirrored side
-                        if   dx >  30:
-                            var['animation'] = [[button_name,'r'], 0,'']
-                        elif dy < -30:
-                            inv_let = 'd' if button_name[-2] in ['b', 'r'] and button_name[-1] not in ['d','u'] else 'u'
-                            var['animation'] = [[button_name, inv_let], 0,'']
-                        elif dx < -30:
-                            var['animation'] = [[button_name,'l'], 0,'']
-                        elif dy >  30:
-                            inv_let = 'u' if button_name[-2] in ['b', 'r'] and button_name[-1] not in ['d','u'] else 'd'
-                            var['animation'] = [[button_name, inv_let], 0,'']
-                    var['out_text'] = var['animation'] # for visualization
+                # informating if any button was activated
+                elif not var['animation'][0]:
+                    if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1 and not mouse_keys[2]:
+                        new_list = []
+                        for _object in camera.order:
+                            # if button`s depth < 0 mask won`t work
+                            if _object[0].name[:6] == 'button' and _object[1] > 0:
+                                for point in list(_object[3][('1', '2', '3', '4')]['render_points']):
+                                    new_list.append((point[0], point[1]))
+                                button_name = _object[0].name
+                                # mask creation
+                                surf = pygame.Surface((1920, 1080), pygame.SRCALPHA)
+                                pygame.draw.polygon(surf, (255, 255, 255), new_list)
+                                mask = pygame.mask.from_surface(surf)
+                                # check if click was in the polygon
+                                if mask.get_at((pygame.mouse.get_pos())):
+                                    var['motion_start'] = button_name
+                                    dx, dy = 0,0
+                                    break
+                    # if after button press action in any direction was made
+                    if var['motion_start']:
+                        if event.type == pygame.MOUSEMOTION and mouse_keys[0]:
+                            dx += event.rel[0] ; dy += event.rel[1]
+                            # inversion of mirrored side
+                            if   dx >  30:
+                                var['animation'] = [[var['motion_start'],'r'], 0,'']
+                            elif dy < -30:
+                                inv_let = 'd' if var['motion_start'][-2] in ['b', 'r'] and \
+                                                 var['motion_start'][-1] not in ['d','u'] else 'u'
+                                var['animation'] = [[var['motion_start'], inv_let], 0,'']
+                            elif dx < -30:
+                                var['animation'] = [[var['motion_start'],'l'], 0,'']
+                            elif dy >  30:
+                                inv_let = 'u' if var['motion_start'][-2] in ['b', 'r'] and \
+                                                 var['motion_start'][-1] not in ['d','u'] else 'd'
+                                var['animation'] = [[var['motion_start'], inv_let], 0,'']
+                            # sounds
+                            if var['animation'][0]:
+                                if var['mode'] == 'game' and var['shuffle'] != 'fast' and main_json.data['sound']:
+                                    sound('click')
+                                # turning off the switch
+                                var['motion_start'] = ''
+                        # for visualization (f3)
+                        var['out_text'] = var['animation']
 
     """ OUTPUT """
 
@@ -721,53 +812,77 @@ while running:
     # objects output render
     camera.render_polygon()
 
+    # depending on current mode
+    match var['mode']:
 
-    # start menu
-    if var['mode'] == 'menu':
-        font = pygame.font.Font(resource_path("textures/cosmo.otf"), 170)
-        text = font.render("play", True, (255, 255, 255))
-        screen.blit(text, (1300, 450))
-        camera.rotate(1,1)
-        camera.rotate(0, 1)
-        screen.blit(textures['black'], (0, 0))
+        # start menu
+        case 'menu':
+            # main menu buttons
+            font = pygame.font.Font(resource_path("textures/cosmo.otf"), 170)
+            text = font.render("play", True, (255, 255, 255))
+            screen.blit(text, (1300, 350))
+            font = pygame.font.Font(resource_path("textures/cosmo.otf"), 80)
+            text = font.render("INSPECT", True, (255, 255, 255))
+            screen.blit(text, (1315, 600))
+            screen.blit(textures['black'], (0, 0))
 
+            # top 3 best runs
+            font = pygame.font.Font("textures/sans.ttf", 40)
+            if main_json.data['best_time'][0]:
+                text = font.render(f"1. {main_json.data['best_time'][0]}", True, (255, 255, 255))
+                screen.blit(text, (1650, 15))
+            if main_json.data['best_time'][1]:
+                text = font.render(f"2. {main_json.data['best_time'][1]}", True, (255, 255, 255))
+                screen.blit(text, (1650, 55))
+            if main_json.data['best_time'][2]:
+                text = font.render(f"3. {main_json.data['best_time'][2]}", True, (255, 255, 255))
+                screen.blit(text, (1650, 95))
 
-    # start animation
-    if var['mode'] == 'start':
-        screen.blit(textures['black'], (0, 0))
-
-
-    # in-game animation
-    if var['mode'] == 'game':
-
-        # upper menu output
-        if not world.solved:
-            basic_animation('menu', 90, 9, 3)
-        if anim['menu'] > 0:
-            cords = (0, -90 + anim['menu'])
-            screen.blit(textures['menu'], cords)
-            if not var['silent_mode']:
-                screen.blit(textures['sound_on'], cords)
+            # sound on/of
+            screen.blit(textures['sound'], (15, 0))
+            if main_json.data['sound']:
+                screen.blit(textures['sound_on'], (15,0))
             if clicks['menu_sound'].collidepoint(mouse_pos):
-                screen.blit(textures['left_button'], cords)
-            if clicks['menu_exit'].collidepoint(mouse_pos):
-                screen.blit(textures['right_button'], cords)
-            font = pygame.font.Font(None, 80)
-            text = font.render(timer.time, True, (255, 255, 255))
-            screen.blit(text, (cords[0] + 1650, cords[1] + 25))
+                screen.blit(textures['corner_button'], (15,0))
 
-        # if rubik is solved
-        if world.solved:
-            if anim['menu'] < 90:
-                anim['menu'] += 5
-            if anim['win_fade'] < 90:
-                anim['win_fade'] += 5
-            textures['win_fade'].set_alpha(anim['win_fade'])
-            screen.blit(textures['win_fade'], (0, 0))
-        elif anim['win_fade'] > 0:
-            textures['win_fade'].set_alpha(anim['win_fade'])
-            screen.blit(textures['win_fade'], (0, 0))
-            anim['win_fade'] -= 5
+
+        # start animation
+        case 'start':
+            screen.blit(textures['black'], (0, 0))
+
+
+        # in-game animation
+        case 'game':
+            # upper menu output
+            if not world.solved:
+                basic_animation('menu', 90, 9, 3)
+            if anim['menu'] > 0:
+                cords = (0, -90 + anim['menu'])
+                screen.blit(textures['menu'], cords)
+                if main_json.data['sound']:
+                    screen.blit(textures['sound_on'], cords)
+                if clicks['menu_sound'].collidepoint(mouse_pos):
+                    screen.blit(textures['corner_button'], cords)
+                if clicks['menu_restart'].collidepoint(mouse_pos):
+                    screen.blit(textures['left_button'], cords)
+                if clicks['menu_exit'].collidepoint(mouse_pos):
+                    screen.blit(textures['right_button'], cords)
+                font = pygame.font.Font(None, 80)
+                text = font.render(timer.time, True, (255, 255, 255))
+                screen.blit(text, (cords[0] + 1650, cords[1] + 25))
+
+            # if rubik is solved
+            if world.solved:
+                if anim['menu'] < 90:
+                    anim['menu'] += 5
+                if anim['win_fade'] < 90:
+                    anim['win_fade'] += 5
+                textures['win_fade'].set_alpha(anim['win_fade'])
+                screen.blit(textures['win_fade'], (0, 0))
+            elif anim['win_fade'] > 0:
+                textures['win_fade'].set_alpha(anim['win_fade'])
+                screen.blit(textures['win_fade'], (0, 0))
+                anim['win_fade'] -= 5
 
 
     # in-game info output
@@ -783,7 +898,9 @@ while running:
             f'Size : {camera.size:.2f}',
             f'Mode : {var["mode"]}',
             f'Top menu anim. :{anim['menu']} {var['mouse_lock']}',
-            f'Timer : {timer.time}'
+            f'Timer : {timer.time}',
+            f'Front side rotation : {side_f.rotation}',
+            f'Center rotation : {cent_p.rotation}',
         ])
 
 
