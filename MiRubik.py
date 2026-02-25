@@ -7,7 +7,7 @@ import json
 
 # globals
 var = {'active' : True, 'analytic' : False, 'animation' : [[],0,''], 'solid' : True,
-       'mouse_lock' : '', 'silent_mode' : False, 'remember' : '',
+       'mouse_lock' : '', 'remember' : '',
        'motion_start' : '', 'out_text' : '','shuffle' : '', 'mode' : 'menu', 'mode_anim' : ['',0]}
 
 anim = {'menu' : 0, 'win_fade' : 0, 'restart' : 0,}
@@ -41,8 +41,7 @@ for group_colors in all_colors:
              int(group_colors[pol_color][0][2] / 1.2)))
 
 
-
-""" Texture Functions """
+""" Working Path """
 
 def resource_path(relative_path):
     if hasattr(sys, '_MEIPASS'):
@@ -51,6 +50,7 @@ def resource_path(relative_path):
 
 
 """ Basic Functions """
+
 def angle_calc(_radius, _cord_0, _cord_1):
     _angle = math.degrees(math.acos(_cord_1 / _radius)) if _radius != 0 else 0
     return 360 - _angle if _cord_0 < 0 else _angle
@@ -73,6 +73,7 @@ def rubik_solved():
     return True
 
 """ Output Functions """
+
 def ingame_info(message):
     _font = pygame.font.Font(None, 40)
     for _num, line in enumerate(message):
@@ -80,73 +81,91 @@ def ingame_info(message):
         screen.blit(_text, (15, 5 + _num * 35))
 
 
-""" Rubik Rotation Functions """
-def rubik_rotation():
-    _blocks, index, cof = var['animation'][3]
-    # rotation animation
-    if var['animation'][1] < 90:
-        if var['shuffle'] == 'fast':
-            _add_ang = 30
-        else:
-            _add_ang = 10 if 10 <= var['animation'][1] <= 70 else 2
-        for _obj_location in _blocks:
-            world.rubik[_obj_location].rotate( index, _add_ang * cof)
-        var['animation'][1] += _add_ang
-    else:
-        # rewriting position
-        _blocks.pop(-1)
-        off_blocks = _blocks[2:] + _blocks[:2] if var['animation'][2][1] in ['d', 'r'] else _blocks[-2:] + _blocks[:-2]
-        place_save = []
-        for pl in _blocks:  place_save.append(world.rubik[pl])
-        for pl in off_blocks:  world.rubik[pl] = place_save.pop(0)
-        var['animation'] = [[], 0, '']
+""" Class Rubik """
 
-def rubik_calculation():
-    coef = ()
-    # side rotation
-    if var['animation'][0][0][-1] in ['u', 'd'] and var['animation'][0][-1] in ['l', 'r']:
-        direction = f'y{var['animation'][0][-1]}'
-        coef = (10, ('u', 'd'))
-        blocks_ = blocks_y
-    # front and back side vertical rotation and center
-    elif var['animation'][0][0][-2] in ['f', 'b']:
-        if var['animation'][0][0][-1] == 'm':
-            direction = f'{'x' if var['animation'][0][-1] in ['u', 'd'] else 'y'}{var['animation'][0][-1]}'
-            blocks_ = blocks_x if var['animation'][0][-1] in ['u', 'd'] else blocks_y
-        elif var['animation'][0][0][-1] in ['l', 'r'] and var['animation'][0][-1] in ['u', 'd']:
-            direction = f'x{var['animation'][0][-1]}'
-            coef = (1, ('l', 'r'))
-            blocks_ = blocks_x
+class Rubik:
+    def __init__(self):
+        # animation properties
+        self.animation = [[], 0, '']
+
+        self.rotation_angle = 0
+        self.rotation_info = []
+
+    def reset(self):
+        pass
+
+    def animation_reset(self):
+        self.animation = [[], 0, '']
+
+    def rotation_calculation(self):
+        coef = ()
+        # side rotation
+        if self.animation[0][0][-1] in ['u', 'd'] and self.animation[0][-1] in ['l', 'r']:
+            direction = f'y{self.animation[0][-1]}'
+            coef = (10, ('u', 'd'))
+            blocks_ = blocks_y
+        # front and back side vertical rotation and center
+        elif self.animation[0][0][-2] in ['f', 'b']:
+            if self.animation[0][0][-1] == 'm':
+                direction = f'{'x' if self.animation[0][-1] in ['u', 'd'] else 'y'}{self.animation[0][-1]}'
+                blocks_ = blocks_x if self.animation[0][-1] in ['u', 'd'] else blocks_y
+            elif self.animation[0][0][-1] in ['l', 'r'] and self.animation[0][-1] in ['u', 'd']:
+                direction = f'x{self.animation[0][-1]}'
+                coef = (1, ('l', 'r'))
+                blocks_ = blocks_x
+            else:
+                self.animation = [[], 0, '']
+                return
+        # left and right side vertical rotation and center
+        elif self.animation[0][0][-2] in ['l', 'r']:
+            if self.animation[0][0][-1] == 'm':
+                direction = f'{'z' if self.animation[0][-1] in ['u', 'd'] else 'y'}{self.animation[0][-1]}'
+                blocks_ = blocks_z if self.animation[0][-1] in ['u', 'd'] else blocks_y
+            elif self.animation[0][0][-1] in ['l', 'r'] and self.animation[0][-1] in ['u', 'd']:
+                direction = f'z{self.animation[0][-1]}'
+                coef = (100, ('l', 'r'))
+                blocks_ = blocks_z
+            else:
+                self.animation = [[], 0, '']
+                return
         else:
-            var['animation'] = [[], 0, '']
+            self.animation = [[], 0, '']
             return
-    # left and right side vertical rotation and center
-    elif var['animation'][0][0][-2] in ['l', 'r']:
-        if var['animation'][0][0][-1] == 'm':
-            direction = f'{'z' if var['animation'][0][-1] in ['u', 'd'] else 'y'}{var['animation'][0][-1]}'
-            blocks_ = blocks_z if var['animation'][0][-1] in ['u', 'd'] else blocks_y
-        elif var['animation'][0][0][-1] in ['l', 'r'] and var['animation'][0][-1] in ['u', 'd']:
-            direction = f'z{var['animation'][0][-1]}'
-            coef = (100, ('l', 'r'))
-            blocks_ = blocks_z
+        # if action was recognized
+        new_blocks = blocks_.copy()
+        if coef:
+            mult = -1 if self.animation[0][0][-1] in ['l', 'u'] else 1
+            for i in range(9):
+                new_blocks[i] = str(int(blocks_[i]) + coef[0] * mult)
+        self.animation[2] = direction
+        index = cord_to_index[self.animation[2][0]]
+        cof = -1 if self.animation[2][1] in ['u', 'r'] else 1
+        self.animation.append([new_blocks, index, cof])
+
+    def rotation(self):
+        _blocks, index, cof = self.animation[3]
+        # rotation animation
+        if self.animation[1] < 90:
+            if var['shuffle'] == 'fast':
+                _add_ang = 30
+            else:
+                _add_ang = 10 if 10 <= self.animation[1] <= 70 else 2
+            for _obj_location in _blocks:
+                world.rubik[_obj_location].rotate( index, _add_ang * cof)
+            self.animation[1] += _add_ang
         else:
-            var['animation'] = [[], 0, '']
-            return
-    else:
-        var['animation'] = [[], 0, '']
-        return
-    # if action was recognized
-    new_blocks = blocks_.copy()
-    if coef:
-        mult = -1 if var['animation'][0][0][-1] in ['l', 'u'] else 1
-        for i in range(9):
-            new_blocks[i] = str(int(blocks_[i]) + coef[0] * mult)
-    var['animation'][2] = direction
-    index = cord_to_index[var['animation'][2][0]]
-    cof = -1 if var['animation'][2][1] in ['u', 'r'] else 1
-    var['animation'].append([new_blocks, index, cof])
+            # rewriting position
+            _blocks.pop(-1)
+            off_blocks = _blocks[2:] + _blocks[:2] if self.animation[2][1] in ['d', 'r'] else _blocks[-2:] + _blocks[:-2]
+            place_save = []
+            for pl in _blocks:  place_save.append(world.rubik[pl])
+            for pl in off_blocks:  world.rubik[pl] = place_save.pop(0)
+            self.animation_reset()
+
+rubik = Rubik()
 
 """ Objects Creation Functions """
+
 def create_cube(_obj_name,points_offset, color_input):
     cube_color = ('red','yellow','green','blue','white','orange')
     color_output = ['gray','gray','gray','gray','gray','gray']
@@ -188,27 +207,31 @@ def create_button(_obj_name,points_offset, direction):
         _points[_point][index[2]] += 100 * cof
     return [_obj_name,colored,_points]
 
-""" Work With Json File """
+""" Class Json """
 
 class Json:
-    def __init__(self, file_name, default_dict):
-        self.__name = "MiRubik"
+    """
+        self.data           to change data
+        self.update_data()  to save changes to the json file
+    """
+    def __init__(self, name: str, file_name : str, default_dict: dict):
+        self.__name = name
         self.__file_name = file_name
         self.__default_dict = default_dict
-
         # get user data from the file
         self.data = self.__get_data
         self.update_data()
 
-
     @property
     def __path(self):
+        """ get path that works with compiling """
         save_dir = os.path.join(os.getenv("LOCALAPPDATA"), self.__name)
         os.makedirs(save_dir, exist_ok=True)
         return os.path.join(save_dir, self.__file_name)
 
     @property
     def __get_data(self):
+        """ get data from json file, if no data, get data from default dict """
         try:
             with open(self.__path, "r", encoding="utf-8") as json_file:
                 return json.load(json_file)
@@ -216,175 +239,15 @@ class Json:
             return self.__default_dict
 
     def update_data(self):
+        """ after changing self.data update date in json file """
         with open(self.__path, "w", encoding="utf-8") as _json_file:
             json.dump(self.data, _json_file, ensure_ascii=False, indent=4, sort_keys=True)
 
+
 # object
-main_json = Json("user_data.json",{'sound' : True, 'best_time' : [None,None,None] })
+main_json = Json("MiRubik","user_data.json", {'sound' : True, 'best_time' : [None,None,None] })
 
-""" World Class """
-class World:
-    def __init__(self):
-        all_worlds.append(self)
-        self.colors = all_colors[0]
-        self.all_objects = []
-        self.all_cameras = []
-        self.points = {}
-        self.rubik = {}
-        self.points_copy = None
-        self.rubik_copy = None
-        self.solved = False
-
-    def save_data(self):
-        self.rubik_copy = copy.deepcopy(self.rubik)
-        self.points_copy = copy.deepcopy(self.points)
-
-    def reset(self):
-        for camera_ in self.all_cameras:
-            camera_.reset()
-        for object_ in self.all_objects:
-            object_.reset()
-            print(1)
-        self.rubik = copy.deepcopy(self.rubik_copy)
-        self.points = copy.deepcopy(self.points_copy)
-        var['active'] = True
-        for animation in anim:
-            anim[animation] = 0
-
-
-""" Camera Class """
-class CameraChanger:
-    def __init__(self,name,rotation=(0,0)):
-        world.all_cameras.append(self)
-        self.name = name
-        self.init_rotation = rotation
-        self.rotation = [rotation[0],rotation[1]]
-        self.size = 1
-        self.order = []
-
-    def reset(self):
-        self.rotation = list(self.init_rotation)
-        self.size = 1
-
-    def rotate(self,index, _add_ang):
-        self.rotation[index] += _add_ang
-        if self.rotation[index] > 360:
-            self.rotation[index] -= 360
-        elif self.rotation[index] < -360:
-            self.rotation[index] += 360
-        var['active'] = True
-
-    def resize(self,add_size):
-        self.size *= 1 + add_size / 100
-        var['active'] = True
-
-    def render(self):
-        """calculating points position on the screen"""
-
-        def calculate_color(_depth, _colors):
-            """calculate color based on z position of an object"""
-            f_colors = []
-            limit = 80 * camera.size
-            if _depth > limit:
-                return _colors
-            elif _depth < -limit:
-                return int(_colors[0] / 1.5), int(_colors[1] / 1.5), int(_colors[2] / 1.5)
-            for _color in _colors:
-                f_colors.append(int(_color / (1 + ((_depth - limit) / -40))))
-            return f_colors
-
-        def sort(_order, condition, content):
-            """sort object or polygon based on z position"""
-            if _order:
-                for _num in range(len(_order)):
-                    if condition > _order[_num][1]:
-                        return _order.insert(_num, content)
-            return _order.append(content)
-
-        self.order = []
-        for _obj in world.all_objects:
-            # creating colored polygons from points and sorting them
-            polygons = {} ; pol_order = [] ; obj_depth = 0
-            for polygon, color in _obj.polygons:
-                polygons[polygon] = {'render_points': [], 'depth': 0}
-                for _point in polygon:
-                    # camera y rotation offset
-                    radius = math.hypot(world.points[_obj.name][_point][0], world.points[_obj.name][_point][2])
-                    angle = angle_calc(radius,
-                                world.points[_obj.name][_point][0], world.points[_obj.name][_point][2]) - self.rotation[1]
-                    cord_x = round(radius * math.sin(math.radians(angle)), 2)
-                    cord_y = world.points[_obj.name][_point][1]
-                    cord_z = round(radius * math.cos(math.radians(angle)), 2)
-                    # camera x rotation offset and final camera cord output
-                    radius = math.hypot(cord_y, cord_z)
-                    angle = angle_calc(radius, cord_y, cord_z) - self.rotation[0]
-                    cord_x = round(cord_x * self.size, 2)
-                    cord_y = round(radius * math.sin(math.radians(angle)) * self.size, 2)
-                    cord_z = round(radius * math.cos(math.radians(angle)) * self.size, 2)
-
-                    # saving point output cords
-                    mult = round(((( cord_z + 125) / 375) + 2), 2)
-                    polygons[polygon]['render_points'].append((int(center[0] + cord_x * mult),
-                                                               int(center[1] - cord_y * mult)))
-                    # saving point depth
-                    polygons[polygon]['depth'] += cord_z
-                    if -50 < cord_y < 50 and -50 < cord_x < 50:
-                        polygons[polygon]['depth'] += 6
-
-                # saving object depth
-                obj_depth += polygons[polygon]['depth']
-                # color of the polygon calculation
-                final_color = (calculate_color(polygons[polygon]['depth'] / 4, color[0]),
-                               calculate_color(polygons[polygon]['depth'] / 4, color[1]))
-                # in "pol_order" sorting all polygons of an object
-                sort(pol_order, polygons[polygon]['depth'], (polygon, polygons[polygon]['depth'], final_color))
-            # in "order" sorting object itself
-            sort(self.order, obj_depth, (_obj, obj_depth, pol_order[::-1], polygons))
-
-    def render_polygon(self):
-        for obj_info in self.order[::-1]:
-            if obj_info[0].name[:6] != 'button':
-                for _polygon, _depth, _color in obj_info[2]:
-                    if var['solid']:
-                        pygame.draw.polygon(screen, _color[0], obj_info[3][_polygon]['render_points'])
-                    pygame.draw.polygon(screen, _color[1], obj_info[3][_polygon]['render_points'], 3)
-
-
-""" Object Class """
-class ObjectChanger:
-    def __init__(self, obj_name,polygons,_points):
-        world.all_objects.append(self)
-        self.name = obj_name
-        world.points[self.name] = _points
-        self.rotation = [0, 0, 0]
-        self.size = 1
-        self.polygons = polygons
-
-    def reset(self):
-        self.rotation = [0, 0, 0]
-        print('1')
-
-    def rotate(self,index, _add_ang):
-        for _point in world.points[self.name]:
-            radius = math.hypot(world.points[self.name][_point][index[0]],
-                                world.points[self.name][_point][index[1]])
-            angle = angle_calc(radius, world.points[self.name][_point][index[0]],
-                               world.points[self.name][_point][index[1]]) - _add_ang
-            world.points[self.name][_point][index[0]] = round(radius * math.sin(math.radians(angle)), 2)
-            world.points[self.name][_point][index[1]] = round(radius * math.cos(math.radians(angle)), 2)
-        self.rotation[pairs_to_cords[index]] -= _add_ang
-        if self.rotation[pairs_to_cords[index]] >= 360:
-            self.rotation[pairs_to_cords[index]] -= 360
-        if self.rotation[pairs_to_cords[index]] < 0:
-            self.rotation[pairs_to_cords[index]] += 360
-        var['active'] = True
-
-    def resize(self,add_size):
-        for _point in world.points[self.name]:
-            for index in [0,1,2]:
-                world.points[self.name][_point][index] *= round(1 + add_size / 100,2)
-        self.size *= 1 + add_size / 100
-        var['active'] = True
+""" Class Timer """
 
 class Timer:
     def __init__(self):
@@ -417,13 +280,192 @@ class Timer:
             return f"{minutes:02}:{seconds:02}:{milliseconds:02}"
         return "00:00:00"
 
+# timer
+timer = Timer()
 
+""" World Class """
 
-"""Objects"""
+class World:
+    def __init__(self):
+        self.colors = all_colors[0]
+        self.all_objects = []
+        self.all_cameras = []
+        self.rubik = {}
+        self.rubik_copy = None
+        self.solved = False
+
+    def save_data(self):
+        self.rubik_copy = copy.deepcopy(self.rubik)
+
+    def reset(self):
+        for camera_ in self.all_cameras:
+            camera_.reset()
+        for object_ in self.all_objects:
+            object_.reset()
+        self.rubik = copy.deepcopy(self.rubik_copy)
+        for animation in anim:
+            anim[animation] = 0
+        var['active'] = True
+
 # world
-all_worlds = []
-world_1 = World()
-world = all_worlds[0]
+world = World()
+
+""" Camera Class """
+
+class CameraChanger:
+    """ Calculating all points` position on the screen and rendering objects in order """
+
+    def __init__(self,name,rotation=(0,0)):
+        world.all_cameras.append(self)
+        # main properties
+        self.name = name
+        self.rotation = list(rotation)
+        self.size = 1
+        # all objects and their`s info order (for rendering)
+        self.order = []
+        # save start rotation
+        self.init_rotation = rotation
+
+    def reset(self):
+        """ full camera reset """
+        self.rotation = list(self.init_rotation)
+        self.size = 1
+
+    def rotate(self,index, _add_ang):
+        """ rotate the camera """
+        self.rotation[index] += _add_ang
+        if self.rotation[index] > 360:
+            self.rotation[index] -= 360
+        elif self.rotation[index] < -360:
+            self.rotation[index] += 360
+        var['active'] = True
+
+    def resize(self,add_size):
+        """ resize the camera """
+        if (camera.size < 2 or add_size < 0) and (camera.size > 0.3 or add_size > 0):
+            self.size *= 1 + add_size / 20
+            var['active'] = True
+
+    def calculate(self):
+        """
+            1) calculating points position on the screen
+            2) creating polygon presets, including polygon depth,color and points
+            3) saving all object`s polygons in order
+            4) saving object in self.order for rendering later
+        """
+        def calculate_color(_depth, _colors):
+            """calculate color based on z position of an object"""
+            f_colors = []
+            limit = 80 * camera.size
+            if _depth > limit:
+                return _colors
+            elif _depth < -limit:
+                return int(_colors[0] / 1.5), int(_colors[1] / 1.5), int(_colors[2] / 1.5)
+            for _color in _colors:
+                f_colors.append(int(_color / (1 + ((_depth - limit) / -40))))
+            return f_colors
+
+        def sort(_order, condition, content):
+            """sort object or polygon based on z position"""
+            if _order:
+                for _num in range(len(_order)):
+                    if condition > _order[_num][1]:
+                        return _order.insert(_num, content)
+            return _order.append(content)
+
+        self.order = []
+        for obj in world.all_objects:
+            # creating colored polygons from points and sorting them
+            polygons = {} ; pol_order = [] ; obj_depth = 0
+            for polygon, color in obj.polygons:
+                polygons[polygon] = {'render_points': [], 'depth': 0}
+                for _point in polygon:
+                    # camera y rotation offset
+                    radius = math.hypot(obj.points[_point][0], obj.points[_point][2])
+                    angle = angle_calc(radius,
+                                obj.points[_point][0], obj.points[_point][2]) - self.rotation[1]
+                    cord_x = round(radius * math.sin(math.radians(angle)), 2)
+                    cord_y = obj.points[_point][1]
+                    cord_z = round(radius * math.cos(math.radians(angle)), 2)
+                    # camera x rotation offset and final camera cord output
+                    radius = math.hypot(cord_y, cord_z)
+                    angle = angle_calc(radius, cord_y, cord_z) - self.rotation[0]
+                    cord_x = round(cord_x * self.size, 2)
+                    cord_y = round(radius * math.sin(math.radians(angle)) * self.size, 2)
+                    cord_z = round(radius * math.cos(math.radians(angle)) * self.size, 2)
+
+                    # saving point output cords
+                    mult = round(((( cord_z + 125) / 375) + 2), 2)
+                    polygons[polygon]['render_points'].append((int(center[0] + cord_x * mult),
+                                                               int(center[1] - cord_y * mult)))
+                    # saving point depth
+                    polygons[polygon]['depth'] += cord_z
+                    if -50 < cord_y < 50 and -50 < cord_x < 50:
+                        polygons[polygon]['depth'] += 6
+
+                # saving object depth
+                obj_depth += polygons[polygon]['depth']
+                # color of the polygon calculation
+                final_color = (calculate_color(polygons[polygon]['depth'] / 4, color[0]),
+                               calculate_color(polygons[polygon]['depth'] / 4, color[1]))
+                # in "pol_order" sorting all polygons of an object
+                sort(pol_order, polygons[polygon]['depth'], (polygon, polygons[polygon]['depth'], final_color))
+            # in "order" sorting object itself
+            sort(self.order, obj_depth, (obj, obj_depth, pol_order[::-1], polygons))
+
+    def render(self):
+        """ rendering all objects` polygons relying on self.order """
+        for obj_info in self.order[::-1]:
+            if obj_info[0].name[:6] != 'button':
+                for _polygon, _depth, _color in obj_info[2]:
+                    if var['solid']:
+                        pygame.draw.polygon(screen, _color[0], obj_info[3][_polygon]['render_points'])
+                    pygame.draw.polygon(screen, _color[1], obj_info[3][_polygon]['render_points'], 3)
+
+
+# cameras
+camera1 = CameraChanger('Camera 1',(20,45))
+camera2 = CameraChanger('Camera 2',(20,45))
+camera = world.all_cameras[0]
+
+
+""" Object Class """
+
+class ObjectChanger:
+    def __init__(self, name, polygons, points):
+        # add object to all objects
+        world.all_objects.append(self)
+        # main properties
+        self.name = name
+        self.points = points
+        self.rotation = [0, 0, 0]
+        self.polygons = polygons
+        # saving start points position
+        self.points_copy = copy.deepcopy(self.points)
+
+    def reset(self):
+        """ reset the object """
+        self.rotation = [0, 0, 0]
+        self.points = copy.deepcopy(self.points_copy)
+
+    def rotate(self,index, _add_ang):
+        """ rotate object """
+
+        for _point in self.points:
+            radius = math.hypot(self.points[_point][index[0]],
+                                self.points[_point][index[1]])
+            angle = angle_calc(radius, self.points[_point][index[0]],
+                               self.points[_point][index[1]]) - _add_ang
+            self.points[_point][index[0]] = round(radius * math.sin(math.radians(angle)), 2)
+            self.points[_point][index[1]] = round(radius * math.cos(math.radians(angle)), 2)
+        self.rotation[pairs_to_cords[index]] -= _add_ang
+        if self.rotation[pairs_to_cords[index]] >= 360:
+            self.rotation[pairs_to_cords[index]] -= 360
+        if self.rotation[pairs_to_cords[index]] < 0:
+            self.rotation[pairs_to_cords[index]] += 360
+        var['active'] = True
+
+# creating ObjectChanger objects
 
 # corners
 corner_lfu = ObjectChanger(*create_cube('corner_lfu',(-66, 66, 66), (1,3,5)))
@@ -471,6 +513,8 @@ for num, side in enumerate(['f','r','b','l']):
     buttons[f'{side}{let[2]}'] = ObjectChanger(*create_button(f'button_{side}{let[2]}',(  0,-66),side))
     buttons[f'{side}{let[3]}'] = ObjectChanger(*create_button(f'button_{side}{let[3]}',( 66,  0),side))
 
+""" Rubik starting state """
+
 world.rubik = {# first layer (front)
         '111' : corner_lfu, '112' : cut_fu, '113' : corner_rfu,
         '121' : cut_lf    , '122' : side_f, '123' : cut_rf    ,
@@ -484,14 +528,6 @@ world.rubik = {# first layer (front)
         '321' : cut_lb    , '322' : side_b, '323' : cut_rb    ,
         '331' : corner_lbd, '332' : cut_bd, '333' : corner_rbd,}
 
-# cameras
-camera1 = CameraChanger('Camera 1',(20,45))
-camera2 = CameraChanger('Camera 2',(20,45))
-camera = world.all_cameras[0]
-
-# timer
-timer = Timer()
-
 """ PyGame """
 
 pygame.init()
@@ -499,6 +535,8 @@ screen = pygame.display.set_mode((1920, 1080), pygame.FULLSCREEN | pygame.SCALED
 clock = pygame.time.Clock()
 background_color = (55, 55, 55)
 screen.fill(background_color)
+
+# Textures
 
 textures = {
     'fade'         : pygame.image.load(resource_path("textures/fade.png")).convert_alpha(),
@@ -517,14 +555,20 @@ textures['fade'] = pygame.transform.scale(textures['fade'], (1920, 1080))
 textures['win_fade'] = pygame.transform.scale(textures['win_fade'], (1920, 1080))
 textures['black'].set_alpha(60)
 textures['win_fade'].set_alpha(60)
+
+# Sounds
+
 sounds = {
     'click'  : pygame.mixer.Sound("textures/click.wav"),
     'select' : pygame.mixer.Sound("textures/select.wav"),
 }
 pygame.mixer.music.load("textures/cosmo.mp3")
 pygame.mixer.music.play(-1)
+# if silent mode is on
 if not main_json.data['sound']:
     pygame.mixer.music.pause()
+
+# Clickable Buttons
 
 clicks = {
     'menu' : pygame.Rect(0, 0, 1920, 130),
@@ -534,8 +578,9 @@ clicks = {
     'menu_restart' : pygame.Rect(830, 0, 110, 100),
     'play' : pygame.Rect(1300, 350, 300, 130),
     'inspect' : pygame.Rect(1315, 600, 300, 130),
-
 }
+
+""" Starting Variables """
 
 var['mode'] = 'menu'
 center = [550,540]
@@ -553,7 +598,7 @@ while running:
     # objects re-render if action made
     if var['active']:
         var['active'] = False
-        camera.render()
+        camera.calculate()
 
     # timer update
     world.solved = rubik_solved()
@@ -561,11 +606,10 @@ while running:
         timer.update()
     # switches
     if world.solved != var['remember']:
-        if world.solved or var['mode'] != 'game' or var['game_type'] != 'play':
+        if world.solved and var['mode'] == 'game' and var['game_type'] == 'play':
             timer.stop()
-        else:
-            timer.reset()
-            timer.start()
+            # here I should save time to json
+
     # make a switch
     var['remember'] = rubik_solved()
 
@@ -586,23 +630,23 @@ while running:
 
     # if shuffle mode
     if var['shuffle']:
-        if not var['animation'][0]:
+        if not rubik.animation[0]:
             while True:
                 button1 = random.choice(world.all_objects)
                 if button1.name[:6] == 'button':
                     break
             letter1 = random.choice(['l', 'r', 'u', 'd'])
-            var['animation'] = [[button1.name, letter1], 0,'']
+            rubik.animation = [[button1.name, letter1], 0,'']
 
 
     # calculating blocks to move and the direction
-    if var['animation'][0]:
+    if rubik.animation[0]:
         # rotation animation
-        if not var['animation'][2]:
-            rubik_calculation()
+        if not rubik.animation[2]:
+            rubik.rotation_calculation()
         # rotation
-        if var['animation'][2]:
-            rubik_rotation()
+        if rubik.animation[2]:
+            rubik.rotation()
 
 
     # start animation
@@ -631,8 +675,9 @@ while running:
             if var['mode_anim'][1] > 90:
                 textures['black'].set_alpha(textures['black'].get_alpha() - 1)
 
-            #if var['mode_anim'][1] > 100:
-            #  var['shuffle'] = 'slow'
+            if var['mode_anim'][1] > 100:
+                if var['game_type'] == 'play':
+                    var['shuffle'] = 'slow'
 
             if var['mode_anim'][1] > 150:
                 var['mode'] = 'game'
@@ -643,7 +688,7 @@ while running:
                 camera.rotation = list(camera.init_rotation)
                 var['active'] = True
                 textures['black'].set_alpha(60)
-                # start timer
+                # start timer if game type play
                 if var['game_type'] == 'play':
                     timer.start()
 
@@ -679,7 +724,6 @@ while running:
         if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1 and clicks['menu_sound'].collidepoint(mouse_pos):
             # updating the value
             main_json.data['sound'] = not main_json.data['sound']
-            print(main_json.data['sound'])
             main_json.update_data()
             # turning on/off silent mode
             pygame.mixer.music.unpause() if main_json.data['sound'] else pygame.mixer.music.pause()
@@ -715,6 +759,8 @@ while running:
 
                 if clicks['menu'].collidepoint(mouse_pos) and not (event.type == pygame.MOUSEMOTION and mouse_keys[2]):
                     var['mouse_lock'] = 'menu'
+                    var['game_type'] = ''
+                    timer.stop()
                     sound('select')
 
                 if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1 and clicks['menu_exit'].collidepoint(mouse_pos):
@@ -733,8 +779,7 @@ while running:
 
                 # camera sizing with mouse
                 if event.type == pygame.MOUSEWHEEL:
-                    if (camera.size < 2 or event.y < 0) and (camera.size > 0.3 or event.y > 0):
-                        camera.resize(event.y * 5)
+                    camera.resize(event.y)
                 # camera rotation with mouse and cursor control
                 elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 3:
                     pygame.mouse.set_visible(False) ; pygame.event.set_grab(True)
@@ -748,18 +793,18 @@ while running:
                         camera.rotate(0, dy / 20)
                     camera.rotate(1, -dx / 20)
 
-                # shuffle mode activation
+                # shuffle mode activation (for testing)
                 elif event.type == pygame.KEYDOWN and event.key == pygame.K_b:
                     var['shuffle'] = 'fast' if var['shuffle'] != 'fast' else ''
 
-                # camera change
+                # camera change (for testing)
                 elif event.type == pygame.KEYDOWN and event.key == pygame.K_k:
                     _index = world.all_cameras.index(camera)
                     camera = world.all_cameras[_index + 1] if _index < len(world.all_cameras) - 1 else world.all_cameras[0]
                     var['active'] = True
 
                 # informating if any button was activated
-                elif not var['animation'][0]:
+                elif not rubik.animation[0]:
                     if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1 and not mouse_keys[2]:
                         new_list = []
                         for _object in camera.order:
@@ -783,25 +828,25 @@ while running:
                             dx += event.rel[0] ; dy += event.rel[1]
                             # inversion of mirrored side
                             if   dx >  30:
-                                var['animation'] = [[var['motion_start'],'r'], 0,'']
+                                rubik.animation = [[var['motion_start'],'r'], 0,'']
                             elif dy < -30:
                                 inv_let = 'd' if var['motion_start'][-2] in ['b', 'r'] and \
                                                  var['motion_start'][-1] not in ['d','u'] else 'u'
-                                var['animation'] = [[var['motion_start'], inv_let], 0,'']
+                                rubik.animation = [[var['motion_start'], inv_let], 0,'']
                             elif dx < -30:
-                                var['animation'] = [[var['motion_start'],'l'], 0,'']
+                                rubik.animation = [[var['motion_start'],'l'], 0,'']
                             elif dy >  30:
                                 inv_let = 'u' if var['motion_start'][-2] in ['b', 'r'] and \
                                                  var['motion_start'][-1] not in ['d','u'] else 'd'
-                                var['animation'] = [[var['motion_start'], inv_let], 0,'']
+                                rubik.animation = [[var['motion_start'], inv_let], 0,'']
                             # sounds
-                            if var['animation'][0]:
+                            if rubik.animation[0]:
                                 if var['mode'] == 'game' and var['shuffle'] != 'fast' and main_json.data['sound']:
                                     sound('click')
                                 # turning off the switch
                                 var['motion_start'] = ''
                         # for visualization (f3)
-                        var['out_text'] = var['animation']
+                        var['out_text'] = rubik.animation
 
     """ OUTPUT """
 
@@ -810,7 +855,7 @@ while running:
     screen.blit(textures['fade'], (0, 0))
 
     # objects output render
-    camera.render_polygon()
+    camera.render()
 
     # depending on current mode
     match var['mode']:
