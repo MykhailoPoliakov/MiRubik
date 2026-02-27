@@ -1,5 +1,20 @@
 class Timer:
-    """ timer, that depends on ticks """
+    """ Timer, that depends on ticks
+        Attributes:
+            self.active: bool
+                to check if timer is running
+
+        Methods:
+            self.start( ticks )
+                starts the timer
+            self.update( ticks )
+                update every tick
+            self.stop()
+                stops the timer
+            self.reset()
+                resets the timer
+
+        """
     def __init__(self):
         self.__running: bool = False
         self.__start_time: int = 0
