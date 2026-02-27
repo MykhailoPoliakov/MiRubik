@@ -40,7 +40,7 @@ def sound(track):
 
 def rubik_solved():
     for key in world.rubik:
-        if world.rubik[key].rotation != cent_p.rotation:
+        if world.elements[world.rubik[key]].rotation != world.elements['cent_p'].rotation:
             return False
     return True
 
@@ -142,8 +142,8 @@ class Rubik:
                 _add_ang = 30
             else:
                 _add_ang = 10 if 10 <= self.animation['rotation_angle'] <= 70 else 2
-            for _obj_location in _blocks:
-                world.rubik[_obj_location].rotate( index, _add_ang * cof)
+            for obj_location in _blocks:
+                world.elements[world.rubik[obj_location]].rotate( index, _add_ang * cof)
             self.animation['rotation_angle'] += _add_ang
             world.rerender()
         else:
@@ -244,7 +244,7 @@ timer = Timer()
 
 class World:
     def __init__(self):
-        self.all_objects = []
+        self.elements = {}
         self.rubik = {}
         self.rubik_copy = None
         self.solved = False
@@ -259,7 +259,7 @@ class World:
 
     def reset(self):
         camera.reset()
-        for object_ in self.all_objects:
+        for object_ in self.elements:
             object_.reset()
         self.rubik = copy.deepcopy(self.rubik_copy)
         for animation in anim:
@@ -340,7 +340,7 @@ class CameraChanger:
             return 360 - _angle if _cord_0 < 0 else _angle
 
         self.order = []
-        for obj in world.all_objects:
+        for obj in world.elements.values():
             # creating colored polygons from points and sorting them
             polygons = {} ; pol_order = [] ; obj_depth = 0
             for polygon, color in obj.polygons:
@@ -399,8 +399,6 @@ class Element:
     invert_index = { 0 : (1, 2), 1 : (0, 2), 2 : (0, 1)}
 
     def __init__(self, name: str, polygons: tuple[tuple,tuple], points: dict[str,list], visibility: bool):
-        # add object to all objects
-        world.all_objects.append(self)
         # main properties
         self.name: str = name
         self.points: dict[str,list] = points
@@ -414,7 +412,6 @@ class Element:
         """ reset the object """
         self.rotation = [0, 0, 0]
         self.points = copy.deepcopy(self.__points_copy)
-        world.rerender()
 
     def rotate(self, index: int, add_angle: int | float) -> None:
         """ rotate object """
@@ -422,6 +419,7 @@ class Element:
             """ get angle of the point to the center """
             _angle = math.degrees(math.acos( cord_1 / _radius )) if _radius != 0 else 0
             return 360 - _angle if cord_0 < 0 else _angle
+
         # inverted index
         inv_index: tuple = self.invert_index[index]
         # for all object`s points
@@ -440,85 +438,80 @@ class Element:
             self.rotation[index] -= 360
         if self.rotation[index] < 0:
             self.rotation[index] += 360
-        # rerender the screen
-        world.rerender()
 
 
 # creating ObjectChanger objects
+world.elements = {
+    # FRONT
+    # upper line
+    'corner_lfu' : Element(*create_cube('corner_lfu', (-66, 66, 66), (1, 3, 5))),
+    'cut_fu'     : Element(*create_cube('cut_fu', (0, 66, 66), (1, 5))),
+    'corner_rfu' : Element(*create_cube('corner_rfu', (66, 66, 66), (1, 4, 5))),
+    # middle line
+    'cut_lf'     : Element(*create_cube('cut_lf', (-66, 0, 66), (3, 1))),
+    'side_f'     : Element(*create_cube('side_f', (0, 0, 66), (1,))),
+    'cut_rf'     : Element(*create_cube('cut_rf', (66, 0, 66), (4, 1))),
+    # down line
+    'corner_lfd' : Element(*create_cube('corner_lfd', (-66, -66, 66), (1, 3, 6))),
+    'cut_fd'     : Element(*create_cube('cut_fd', (0, -66, 66), (1, 6))),
+    'corner_rfd' : Element(*create_cube('corner_rfd', (66, -66, 66), (1, 4, 6))),
 
-# corners
-corner_lfu = Element(*create_cube('corner_lfu', (-66, 66, 66), (1, 3, 5)))
-corner_lfd = Element(*create_cube('corner_lfd', (-66, -66, 66), (1, 3, 6)))
-corner_rfu = Element(*create_cube('corner_rfu', (66, 66, 66), (1, 4, 5)))
-corner_rfd = Element(*create_cube('corner_rfd', (66, -66, 66), (1, 4, 6)))
+    # MIDDLE
+    # upper line
+    'cut_lu'     : Element(*create_cube('cut_lu', (-66, 66, 0), (3, 5))),
+    'side_u'     : Element(*create_cube('side_u', (0, 66, 0), (5,))),
+    'cut_ru'     : Element(*create_cube('cut_ru', (66, 66, 0), (4, 5))),
+    # middle line
+    'side_l'     : Element(*create_cube('side_l', (-66, 0, 0), (3,))),
+    'cent_p'     : Element(*create_cube('cent_p', (0, 0, 0), ())),
+    'side_r'     : Element(*create_cube('side_r', (66, 0, 0), (4,))),
+    # down line
+    'cut_ld'     : Element(*create_cube('cut_ld', (-66, -66, 0), (3, 6))),
+    'side_d'     : Element(*create_cube('side_d', (0, -66, 0), (6,))),
+    'cut_rd'     : Element(*create_cube('cut_rd', (66, -66, 0), (4, 6))),
 
-corner_lbu = Element(*create_cube('corner_lbu', (-66, 66, -66), (2, 3, 5)))
-corner_lbd = Element(*create_cube('corner_lbd', (-66, -66, -66), (2, 3, 6)))
-corner_rbu = Element(*create_cube('corner_rbu', (66, 66, -66), (2, 4, 5)))
-corner_rbd = Element(*create_cube('corner_rbd', (66, -66, -66), (2, 4, 6)))
-# cuts
-cut_lu = Element(*create_cube('cut_lu', (-66, 66, 0), (3, 5)))
-cut_ru = Element(*create_cube('cut_ru', (66, 66, 0), (4, 5)))
-cut_fu = Element(*create_cube('cut_fu', (0, 66, 66), (1, 5)))
-cut_bu = Element(*create_cube('cut_bu', (0, 66, -66), (2, 5)))
-
-cut_lf = Element(*create_cube('cut_lf', (-66, 0, 66), (3, 1)))
-cut_rf = Element(*create_cube('cut_rf', (66, 0, 66), (4, 1)))
-cut_lb = Element(*create_cube('cut_lb', (-66, 0, -66), (3, 2)))
-cut_rb = Element(*create_cube('cut_rb', (66, 0, -66), (4, 2)))
-
-cut_ld = Element(*create_cube('cut_ld', (-66, -66, 0), (3, 6)))
-cut_rd = Element(*create_cube('cut_rd', (66, -66, 0), (4, 6)))
-cut_fd = Element(*create_cube('cut_fd', (0, -66, 66), (1, 6)))
-cut_bd = Element(*create_cube('cut_bd', (0, -66, -66), (2, 6)))
-# sides
-side_f = Element(*create_cube('side_f', (0, 0, 66), (1,)))
-side_b = Element(*create_cube('side_b', (0, 0, -66), (2,)))
-side_l = Element(*create_cube('side_l', (-66, 0, 0), (3,)))
-side_r = Element(*create_cube('side_r', (66, 0, 0), (4,)))
-side_u = Element(*create_cube('side_u', (0, 66, 0), (5,)))
-side_d = Element(*create_cube('side_d', (0, -66, 0), (6,)))
-# center
-cent_p = Element(*create_cube('cent_p', (0, 0, 0), ()))
+    # BACK
+    # upper line
+    'corner_lbu' : Element(*create_cube('corner_lbu', (-66, 66, -66), (2, 3, 5))),
+    'cut_bu'     : Element(*create_cube('cut_bu', (0, 66, -66), (2, 5))),
+    'corner_rbu' : Element(*create_cube('corner_rbu', (66, 66, -66), (2, 4, 5))),
+    # middle line
+    'cut_lb'     : Element(*create_cube('cut_lb', (-66, 0, -66), (3, 2))),
+    'side_b'     : Element(*create_cube('side_b', (0, 0, -66), (2,))),
+    'cut_rb'     : Element(*create_cube('cut_rb', (66, 0, -66), (4, 2))),
+    # down line
+    'corner_lbd' : Element(*create_cube('corner_lbd', (-66, -66, -66), (2, 3, 6))),
+    'cut_bd'     : Element(*create_cube('cut_bd', (0, -66, -66), (2, 6))),
+    'corner_rbd' : Element(*create_cube('corner_rbd', (66, -66, -66), (2, 4, 6))),
+}
 
 # buttons
-buttons = {}
-i_let = (['u','l','d','r'],['l','d','r','u'],['d','r','u','l'],['r','u','l','d'])
-for num, side in enumerate(['f','r','b','l']):
-    let = i_let[num]
-    buttons[f'{side}m'] = Element(*create_button(f'button_{side}m', (0, 0), side))
-    buttons[f'{side}{let[0]}'] = Element(*create_button(f'button_{side}{let[0]}', (0, 66), side))
-    buttons[f'{side}{let[1]}'] = Element(*create_button(f'button_{side}{let[1]}', (-66, 0), side))
-    buttons[f'{side}{let[2]}'] = Element(*create_button(f'button_{side}{let[2]}', (0, -66), side))
-    buttons[f'{side}{let[3]}'] = Element(*create_button(f'button_{side}{let[3]}', (66, 0), side))
+letter_list = (['u','l','d','r'],['l','d','r','u'],['d','r','u','l'],['r','u','l','d'])
+for _index, side in enumerate(['f','r','b','l']):
+    letter = letter_list[_index]
+    world.elements.update({
+    f'button_{side}m'        : Element(*create_button(f'button_{side}m', (0, 0), side)),
+    f'button_{side}{letter[0]}' : Element(*create_button(f'button_{side}{letter[0]}', (0, 66), side)),
+    f'button_{side}{letter[1]}' : Element(*create_button(f'button_{side}{letter[1]}', (-66, 0), side)),
+    f'button_{side}{letter[2]}' : Element(*create_button(f'button_{side}{letter[2]}', (0, -66), side)),
+    f'button_{side}{letter[3]}' : Element(*create_button(f'button_{side}{letter[3]}', (66, 0), side)),
+    })
 
-""" Rubik starting state """
 
-rubik_list = [# first layer (front)54
-        corner_lfu,   cut_fu,   corner_rfu,
-        cut_lf    ,   side_f,   cut_rf    ,
-        corner_lfd,   cut_fd,   corner_rfd,
-        # second layer (mid)
-        cut_lu    ,   side_u,   cut_ru    ,
-        side_l    ,   cent_p,   side_r    ,
-        cut_ld    ,   side_d,   cut_rd    ,
-        # third layer (back)
-        corner_lbu,   cut_bu,   corner_rbu,
-        cut_lb    ,   side_b,   cut_rb    ,
-        corner_lbd,   cut_bd,   corner_rbd]
-
-world.rubik = {# first layer (front)
-        '111' : corner_lfu, '112' : cut_fu, '113' : corner_rfu,
-        '121' : cut_lf    , '122' : side_f, '123' : cut_rf    ,
-        '131' : corner_lfd, '132' : cut_fd, '133' : corner_rfd,
-        # second layer (mid)
-        '211' : cut_lu    , '212' : side_u, '213' : cut_ru    ,
-        '221' : side_l    , '222' : cent_p, '223' : side_r    ,
-        '231' : cut_ld    , '232' : side_d, '233' : cut_rd    ,
-        # third layer (back)
-        '311' : corner_lbu, '312' : cut_bu, '313' : corner_rbu,
-        '321' : cut_lb    , '322' : side_b, '323' : cut_rb    ,
-        '331' : corner_lbd, '332' : cut_bd, '333' : corner_rbd,}
+world.rubik = {
+    # first layer (front)
+    '111' : 'corner_lfu', '112' : 'cut_fu', '113' : 'corner_rfu',
+    '121' : 'cut_lf'    , '122' : 'side_f', '123' : 'cut_rf'    ,
+    '131' : 'corner_lfd', '132' : 'cut_fd', '133' : 'corner_rfd',
+    # second layer (mid)
+    '211' : 'cut_lu'    , '212' : 'side_u', '213' : 'cut_ru'    ,
+    '221' : 'side_l'    , '222' : 'cent_p', '223' : 'side_r'    ,
+    '231' : 'cut_ld'    , '232' : 'side_d', '233' : 'cut_rd'    ,
+    # third layer (back)
+    '311' : 'corner_lbu', '312' : 'cut_bu', '313' : 'corner_rbu',
+    '321' : 'cut_lb'    , '322' : 'side_b', '323' : 'cut_rb'    ,
+    '331' : 'corner_lbd', '332' : 'cut_bd', '333' : 'corner_rbd',
+}
 
 
 """ PyGame """
@@ -626,14 +619,9 @@ def main() -> None:
                 timer.start(pygame.time.get_ticks())
 
         # if shuffle mode
-        if var['shuffle']:
-            if not rubik.animation['button_name']:
-                while True:
-                    random_button = random.choice(world.all_objects)
-                    if random_button.name[:6] == 'button':
-                        break
-                rubik.animation['button_name'] = random_button.name
-                rubik.animation['button_direction'] = random.choice(['l', 'r', 'u', 'd'])
+        if var['shuffle'] and not rubik.animation['button_name']:
+            rubik.animation['button_name'] = random.choice(list(world.elements.values())[-20:]).name
+            rubik.animation['button_direction'] = random.choice(['l', 'r', 'u', 'd'])
 
 
         # twist rubik one time, if instructions given
@@ -935,8 +923,8 @@ def main() -> None:
                 f'Mode : {var["mode"]}',
                 f'Top menu anim. :{anim['menu']} {var['mouse_lock']}',
                 f'Timer : {timer.time}',
-                f'Front side rotation : {side_f.rotation}',
-                f'Center rotation : {cent_p.rotation}',
+                f'Front side rotation : {world.elements['side_f'].rotation}',
+                f'Center rotation : {world.elements['cent_p'].rotation}',
             ])
 
 
