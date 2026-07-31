@@ -1,15 +1,12 @@
 import copy
 import random
 
-# local imports
 from convert_obj_fn import convert_obj
 from element_class import Element
 
 
 class Rubik:
-    """
-    something
-    """
+
     blocks_x = ('112', '122', '132', '232', '332', '322', '312', '212', '222')
     blocks_y = ('121', '122', '123', '223', '323', '322', '321', '221', '222')
     blocks_z = ('211', '221', '231', '232', '233', '223', '213', '212', '222')

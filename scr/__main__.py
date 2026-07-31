@@ -1,11 +1,10 @@
 import pygame
-import sys, os
 
-# local classes import
 from json_class import Json
 from timer_class import Timer
 from rubik_class import Rubik
 from camera_class import Camera
+from assets_dicts import textures, sounds, fonts, texts
 
 # globals
 
@@ -14,16 +13,6 @@ var = {'analytic' : False, 'mouse_lock' : '', 'flag' : '',
 
 anim = {'menu' : 0, 'win_fade' : 0, 'restart' : 0,}
 
-
-""" Working Path """
-
-def resource_path(relative_path):
-    if hasattr(sys, '_MEIPASS'):
-        return os.path.join(sys._MEIPASS, relative_path) # pyright: ignore[reportAttributeAccessIssue]
-    return relative_path
-
-def get_texture(texture):
-    return pygame.image.load(resource_path( f"assets/textures/{texture}") ).convert_alpha()
 
 """ Basic Functions """
 
@@ -100,54 +89,10 @@ screen = pygame.display.set_mode((1920, 1080), pygame.FULLSCREEN | pygame.SCALED
 clock = pygame.time.Clock()
 background_color = (55, 55, 55)
 screen.fill(background_color)
-
-# Textures
-
-textures = {
-    'fade'         : get_texture("fade.png"),
-    'win_fade'     : get_texture("win_fade.png"),
-    'background'   : get_texture("lake.jpg"),
-    'black'        : get_texture("black.png"),
-    # top menu
-    'menu'         : get_texture("menu.png"),
-    'left_button'  : get_texture("left_button.png"),
-    'right_button' : get_texture("right_button.png"),
-    'corner_button': get_texture("corner_button.png"),
-    # sound textures
-    'sound_on'     : get_texture("sound_on.png"),
-    'sound'        : get_texture("sound.png"),
-}
-textures['background'] = pygame.transform.scale(textures['background'], (1920, 1080))
-textures['fade'] = pygame.transform.scale(textures['fade'], (1920, 1080))
-textures['win_fade'] = pygame.transform.scale(textures['win_fade'], (1920, 1080))
-textures['black'].set_alpha(60)
-textures['win_fade'].set_alpha(60)
-
-# Sounds
-
-sounds = {
-    'click': pygame.mixer.Sound("assets/sounds/click.wav"),
-    'select': pygame.mixer.Sound("assets/sounds/select.wav"),
-}
+# music
 pygame.mixer.music.load("assets/sounds/cosmo.mp3")
 pygame.mixer.music.play(-1)
 
-# Fonts
-
-bold_fonts = {
-    'sans': "assets/fonts/sans.ttf",
-    'cosmo': "assets/fonts/cosmo.otf",
-}
-fonts = {
-    'cosmo170' : pygame.font.Font( bold_fonts["cosmo"] , 170),
-    'cosmo80'  : pygame.font.Font( bold_fonts["cosmo"] , 80),
-    'sans40'   : pygame.font.Font( bold_fonts["sans"] , 40),
-    'None40'   : pygame.font.Font( None , 40),
-}
-texts = {
-    'play'    : fonts['cosmo170'].render("play", True, (255, 255, 255)),
-    'inspect' : fonts['cosmo80'].render("INSPECT", True, (255, 255, 255))
-}
 
 # Clickable Buttons
 
@@ -171,8 +116,7 @@ world = World()
 camera = Camera((550,540), (20,45))
 
 # Claas Json
-main_json = Json("MiRubik", "MiRubik_data.json",
-                     {'sound': True, 'best_time': [None, None, None]})
+main_json = Json("MiRubik", "MiRubik_userdata.json", {'sound': True, 'best_time': None})
 
 # Class Timer
 timer = Timer()
@@ -212,11 +156,9 @@ def main() -> None:
             var['flag'] = rubik.check_solved()
             if rubik.solved and var['mode'] == 'game' and var['game_type'] == 'play':
                 timer.stop()
-                for ind, best_time in enumerate(main_json.data['best_time']):
-                    if timer.real_time < best_time and timer.real_time not in main_json.data['best_time']:
-                        main_json.data['best_time'].insert(ind, timer.time)
-                        main_json.data['best_time'].pop(-1)
-                        break
+                if not main_json.data['best_time'] or timer.real_time < main_json.data['best_time']:
+                    main_json.data['best_time'] = timer.real_time
+                    main_json.update_data()
 
 
         # if shuffle mode
@@ -374,17 +316,19 @@ def main() -> None:
 
                     # make mouse invisible while rotation happening
                     elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 3:
-                        pygame.mouse.set_visible(False) ; pygame.event.set_grab(True)
+                        pygame.mouse.set_visible(False)
+                        pygame.event.set_grab(True)
                         mouse_cords = pygame.mouse.get_pos()
                     elif event.type == pygame.MOUSEBUTTONUP and event.button == 3:
-                        pygame.mouse.set_visible(True) ; pygame.event.set_grab(False)
+                        pygame.mouse.set_visible(True)
+                        pygame.event.set_grab(False)
                         pygame.mouse.set_pos(mouse_cords)
 
                     # camera rotation
                     elif event.type == pygame.MOUSEMOTION and mouse_keys[2]:
                         dx, dy = event.rel
-                        if (( 0 < camera.rotation[0] + 90 < 170 and dy > 0)
-                        or (  80 < camera.rotation[0] + 90 < 360 and  dy < 0 )) or True:
+
+                        if (dy > 0 and not 80 < camera.rotation[0] < 180) or (dy < 0 and not 180 < camera.rotation[0] < 280):
                             camera.rotate(0, dy / 20)
                         camera.rotate(1, -dx / 20)
 
@@ -393,11 +337,6 @@ def main() -> None:
                         print(f"\n{rubik.state}\n")
                         for element in rubik.elements.values():
                             print(f"{element.name} : {element.rotation}")
-
-                    # shuffle mode activation (for testing)
-                    elif event.type == pygame.KEYDOWN and event.key == pygame.K_b:
-                        rubik.shuffle_val = 'fast' if rubik.shuffle_val != 'fast' else ''
-
 
 
                     # informating if any button was activated
@@ -473,6 +412,14 @@ def main() -> None:
                     screen.blit(textures['corner_button'], (15,0))
 
 
+                if main_json.data["best_time"]:
+                    human_time = main_json.data["best_time"] // 1000
+                    minutes = human_time // 60
+                    seconds = human_time % 60
+                    milliseconds = (main_json.data["best_time"] % 1000) // 10
+                    text = fonts['None40'].render(f"Best time: {minutes:02}:{seconds:02}:{milliseconds:02}", True, (255, 255, 255))
+                    screen.blit(text, (1550, 20))
+
             # start animation
             case 'start':
                 screen.blit(textures['black'], (0, 0))
@@ -518,13 +465,12 @@ def main() -> None:
 
             ingame_info([
                 f'Fps : {int(clock.get_fps())}',
-                f'last rubik rotation : {rubik.animation}',
                 f'Camera Rotation : x {camera.rotation[0]:.0f}° y {camera.rotation[1]:.0f}°',
                 f'Size : {camera.size:.2f}',
                 f'Mode : {var["mode"]}',
                 f'Top menu anim. :{anim['menu']} {var['mouse_lock']}',
-                f'Timer : {timer.time}',
                 f'Center : {rubik.elements['cent_p'].rotation}',
+                f'Json : {main_json.data}',
             ])
 
 
