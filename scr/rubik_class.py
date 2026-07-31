@@ -2,7 +2,7 @@ import copy
 import random
 
 # local imports
-from obj_converter_class import ObjConverter
+from convert_obj_fn import convert_obj
 from element_class import Element
 
 
@@ -14,7 +14,7 @@ class Rubik:
     blocks_y = ('121', '122', '123', '223', '323', '322', '321', '221', '222')
     blocks_z = ('211', '221', '231', '232', '233', '223', '213', '212', '222')
 
-    def __init__(self):
+    def __init__(self, obj_model: str) -> None:
         # rotation properties
         self.animation: dict = {
             'button_name': '',
@@ -26,11 +26,10 @@ class Rubik:
         self.__animation_copy: dict =  self.animation.copy()
         # colors
         self.__colors = self.__create_colors()
-        # converter
-        self.converter = ObjConverter("assets/models/high_rubik.obj", self.__colors)
+
         # elements
         self.elements: dict = {}
-        self.__create_elements_cubes()
+        self.__create_elements_cubes(obj_model)
         self.__create_elements_buttons()
         # rubik`s state
         self.state: dict = {
@@ -55,16 +54,43 @@ class Rubik:
         # re-rendering bool
         self.rerender_bool: bool = False
 
+
     def shuffle(self):
         """ shuffle the rubik """
         self.animation['button_name'] = random.choice(list(self.elements.values())[-20:]).name
         self.animation['button_direction'] = random.choice(['l', 'r', 'u', 'd'])
 
-    def check_solved(self):
-        for place in self.elements:
-            if self.elements[ place ].visibility:
-                if self.elements[ place ].rotation != self.elements[ 'cent_p' ].rotation:
-                    return False
+
+    def check_solved(self) -> bool:
+        full_sides = [[],[],[],[],[],[]]
+        for element in self.state: 
+            # front
+            if element[0] == '1':
+                full_sides[0].append(self.state[element].split("_")[-1])
+            # back
+            if element[0] == '3':
+                full_sides[1].append(self.state[element].split("_")[-1])
+            # left
+            if element[2] == '1':
+                full_sides[2].append(self.state[element].split("_")[-1])
+            # right
+            if element[2] == '3':
+                full_sides[3].append(self.state[element].split("_")[-1])
+            # up
+            if element[1] == '1':
+                full_sides[4].append(self.state[element].split("_")[-1])
+            # down
+            if element[1] == '3':
+                full_sides[5].append(self.state[element].split("_")[-1])
+
+        for full_side in full_sides:
+            same_letters = set(full_side[0])
+            for element_letters in full_side[1:]:
+                same_letters &= set(element_letters)
+
+            if not same_letters:
+                return False
+
         return True
 
     def reset(self):
@@ -177,7 +203,7 @@ class Rubik:
                  int(colors[color][0][2] * 0.8)))
         return colors
 
-    def __create_elements_cubes(self) -> None:
+    def __create_elements_cubes(self, obj_model) -> None:
         """
         Creates cube parts of class Element
         Changes: updates self.elements (adds cube parts)
@@ -185,8 +211,12 @@ class Rubik:
         cube_color = ( 'red', 'orange' , 'blue', 'green', 'white', 'yellow')
         def create_cube(_obj_name, points_offset, color_input):
             """ Helps to create cube """
+
+            # converter
+            points, colored_polygons = convert_obj(obj_model)
+
             # color
-            colored_polygons: list = copy.deepcopy(self.converter.colored_polygons)
+            colored_polygons: list = copy.deepcopy(colored_polygons)
 
             # list of colors cube would have
             exact_colors = []
@@ -201,15 +231,15 @@ class Rubik:
                     colored_polygon[1] = self.__colors[colored_polygon[1]]
 
             # adding offset
-            cube_points = copy.deepcopy(self.converter.points)
-            for index, point in enumerate(self.converter.points):
-                cube_points[index][0] += points_offset[0]
-                cube_points[index][1] += points_offset[1]
-                cube_points[index][2] += points_offset[2]
+            points = copy.deepcopy(points)
+            for index, point in enumerate(points):
+                points[index][0] += points_offset[0]
+                points[index][1] += points_offset[1]
+                points[index][2] += points_offset[2]
             # visibility
             visibility = True
 
-            return [_obj_name, colored_polygons, cube_points, visibility]
+            return [_obj_name, colored_polygons, points, visibility]
 
         # creating Element objects (Rubik parts)
         self.elements.update({

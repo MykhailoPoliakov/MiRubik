@@ -179,7 +179,7 @@ timer = Timer()
 
 
 # Class Rubik
-rubik = Rubik()
+rubik = Rubik("assets/models/high_rubik.obj")
 
 
 def main() -> None:
@@ -390,6 +390,7 @@ def main() -> None:
 
                     #(for testing)
                     elif event.type == pygame.KEYDOWN and event.key == pygame.K_g:
+                        print(f"\n{rubik.state}\n")
                         for element in rubik.elements.values():
                             print(f"{element.name} : {element.rotation}")
 
@@ -463,16 +464,6 @@ def main() -> None:
 
                 screen.blit(textures['black'], (0, 0))
 
-                # top 3 best runs
-                if main_json.data['best_time'][0] or True:
-                    text = fonts['sans40'].render(f"1. {main_json.data['best_time'][0]}", True, (255, 255, 255))
-                    screen.blit(text, (1650, 15))
-                if main_json.data['best_time'][1] or True:
-                    text = fonts['sans40'].render(f"2. {main_json.data['best_time'][1]}", True, (255, 255, 255))
-                    screen.blit(text, (1650, 55))
-                if main_json.data['best_time'][2] or True:
-                    text = fonts['sans40'].render(f"3. {main_json.data['best_time'][2]}", True, (255, 255, 255))
-                    screen.blit(text, (1650, 95))
 
                 # sound on/of
                 screen.blit(textures['sound'], (15, 0))
@@ -510,7 +501,6 @@ def main() -> None:
                 # if rubik is solved
 
                 if rubik.solved:
-                    print(1)
                     if anim['menu'] < 90:
                         anim['menu'] += 5
                     if anim['win_fade'] < 90:
@@ -535,7 +525,6 @@ def main() -> None:
                 f'Top menu anim. :{anim['menu']} {var['mouse_lock']}',
                 f'Timer : {timer.time}',
                 f'Center : {rubik.elements['cent_p'].rotation}',
-                f'Front : {rubik.elements['side_f'].rotation}',
             ])
 
 
