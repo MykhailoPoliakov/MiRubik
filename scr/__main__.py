@@ -19,7 +19,7 @@ anim = {'menu' : 0, 'win_fade' : 0, 'restart' : 0,}
 
 def resource_path(relative_path):
     if hasattr(sys, '_MEIPASS'):
-        return os.path.join(sys._MEIPASS, relative_path)
+        return os.path.join(sys._MEIPASS, relative_path) # pyright: ignore[reportAttributeAccessIssue]
     return relative_path
 
 def get_texture(texture):
@@ -268,7 +268,7 @@ def main() -> None:
                     camera.rotate(1, final_camera_rot_y / 3)
 
                 if var['mode_anim'][1] > 90:
-                    textures['black'].set_alpha(textures['black'].get_alpha() - 1)
+                    textures['black'].set_alpha(textures['black'].get_alpha() - 1) # type: ignore
 
                 if var['mode_anim'][1] > 100:
                     if var['game_type'] == 'play':

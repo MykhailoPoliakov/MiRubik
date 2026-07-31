@@ -41,6 +41,7 @@ class Element:
         self.rotation = [0, 0, 0]
         self.points = copy.deepcopy(self.__points_copy)
 
+
     def rotate(self, index: int, add_angle: int | float) -> None:
 
         match index:

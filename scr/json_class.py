@@ -30,7 +30,7 @@ class Json:
     @property
     def __path(self) -> str:
         """ get path that works with compiling """
-        save_dir = os.path.join(os.getenv("LOCALAPPDATA"), self.__app_name)
+        save_dir = os.path.join(os.getenv("LOCALAPPDATA"), self.__app_name) # pyright: ignore
         os.makedirs(save_dir, exist_ok=True)
         return os.path.join(save_dir, self.__file_name)
 

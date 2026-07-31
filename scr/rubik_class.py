@@ -86,7 +86,7 @@ class Rubik:
 
     def __calculate_rotation(self):
         """ calculates rotation, changes only self.animation"""
-        def cord_to_index(cord: str) -> (int, int):
+        def cord_to_index(cord: str) -> (int):
             transfer = {'x': 0, 'y': 1, 'z': 2}
             return transfer[cord]
 
@@ -128,7 +128,7 @@ class Rubik:
         if coef:
             mult = -1 if self.animation['button_name'][-1] in ['l', 'u'] else 1
             for i in range(9):
-                new_blocks[i] = str(int(blocks[i]) + coef[0] * mult)
+                new_blocks[i] = str(int(blocks[i]) + coef[0] * mult) # type: ignore
         self.animation['rotation_blocks'] = new_blocks
         self.animation['rotation_index'] = cord_to_index(xyz_direction)
         self.animation['rotation_coef'] = -1 if self.animation['button_direction'] in ['u', 'r'] else 1
