@@ -1,4 +1,18 @@
 import numpy as np
+from dataclasses import dataclass
+
+
+@dataclass
+class Polygon:
+    name: str
+    visibility: bool
+    points: list[float]
+    color: tuple[int,int,int]
+    outline_color: tuple[int,int,int]
+    depth: float
+
+
+
 
 class Camera:
     """ Calculating all points` position on the screen and rendering objects in order """
@@ -76,7 +90,8 @@ class Camera:
         # FOR EVERY POINT
 
         self.order = []
-        for element in obj_dict.values():
+        for element_id in obj_dict:
+            element = obj_dict[element_id]
 
             points = element.points.copy()
             # camera y and x rotation offset
@@ -90,28 +105,32 @@ class Camera:
 
             # creating colored polygons from points and sorting them
             for polygon, color in element.polygons:
-                polygons = {'render_points': [], 'depth': 0}
+                render_points =  []
+                depth = 0
                 for index in polygon:
                     # real index
                     index -= 1
 
                     # save data
-                    cord_x, cord_y, cord_z = points[index]
+                    x, y, z = points[index]
 
                     # saving point output cords
-                    mult = 300 / (cord_z + 600)
-                    polygons['render_points'].append((int(self.center[0] + cord_x / mult),
-                                                      int(self.center[1] - cord_y / mult)))
+                    mult = 300 / (z + 600)
+                    render_points.append((int(self.center[0] + x / mult),
+                                                      int(self.center[1] - y / mult)))
                     # saving depth of the polygon
-                    polygons['depth'] += cord_z
-
-                # color of the polygon calculation
-                new_color = (calculate_color(polygons['depth'] / 4, color[0]),
-                             calculate_color(polygons['depth'] / 4, color[1]))
+                    depth += z
 
                 # adding to order
-                self.order.append(( element, polygons['render_points'], new_color, polygons['depth']))
+                self.order.append( Polygon(
+                    name = element_id, 
+                    visibility = element.visibility,
+                    points = render_points, 
+                    color = calculate_color(depth / 4, color[0]), 
+                    outline_color = calculate_color(depth / 4, color[1]),
+                    depth = depth
+                ))
 
         # SORT BY DEPTH
 
-        self.order = sorted(self.order, key=lambda item: item[ -1 ])
+        self.order = sorted(self.order, key=lambda p: p.depth)

@@ -1,12 +1,21 @@
 import copy
 import numpy as np
+from enum import Enum
+
+class Direction(Enum):
+    PlsX = 0
+    MinX = 1
+    PlsY = 2
+    MinY = 3
+    PlsZ = 4
+    MinZ = 5
+
 
 class Element:
     """
     Creates element with it`s points and colored polygons , element can be rotated and reset
 
     Attributes:
-        self.name: str - object`s name
         self.polygons: tuple[polygon: tuple, color: tuple] - object`s polygons and theirs colors
         self.points: dict[ point name: str, xyz cords: list] - object`s points
         self.rotation: list[x,y,z] - object`s rotation angle
@@ -24,20 +33,22 @@ class Element:
     """
     invert_index: dict = { 0 : (1, 2), 1 : (0, 2), 2 : (0, 1)}
 
-    def __init__(self, name: str, polygons: tuple[tuple,tuple], points: np.ndarray, visibility: bool):
+    def __init__(self, polygons: tuple[tuple,tuple], points: np.ndarray, visibility: bool):
         # main properties
-        self.name: str = name
-        self.points: np.ndarray = points
-        self.rotation: list = [0, 0, 0]
-        self.polygons = polygons
+        self.rotation: list = [Direction.PlsX, Direction.PlsY, Direction.PlsZ]
         self.visibility: bool = visibility
+
+        # for rendering
+        self.points: np.ndarray = points
+        self.polygons = polygons
+        
         # saving start points position
         self.__points_copy = copy.deepcopy(self.points)
 
 
     def reset(self) -> None:
         """ reset the object """
-        self.rotation = [0, 0, 0]
+        self.rotation = [Direction.PlsX, Direction.PlsY, Direction.PlsZ]
         self.points = copy.deepcopy(self.__points_copy)
 
 
@@ -77,9 +88,6 @@ class Element:
 
         self.points = self.points @ rotation_matrix
 
-        # update object`s rotation angle
-        self.rotation[index] -= add_angle
-        if self.rotation[index] >= 360:
-            self.rotation[index] -= 360
-        if self.rotation[index] < 0:
-            self.rotation[index] += 360
+
+    def rotate90(self, direction: Direction):
+        pass

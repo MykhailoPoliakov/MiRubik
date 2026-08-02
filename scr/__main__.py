@@ -32,10 +32,10 @@ def sound(track):
 
 def check_click() -> str:
     new_list = []
-    for element, render_points, color, depth in camera.order[::-1]:
+    for polygon in camera.order[::-1]:
         # if button`s depth < 0 mask won`t work
-        if not element.visibility:
-            for pair_points in render_points:
+        if polygon.visibility == False:
+            for pair_points in polygon.points:
                 new_list.append(pair_points)
             # mask creation
             surf = pygame.Surface((1920, 1080), pygame.SRCALPHA)
@@ -43,7 +43,7 @@ def check_click() -> str:
             mask = pygame.mask.from_surface(surf)
             # check if click was in the polygon
             if mask.get_at((pygame.mouse.get_pos())):
-                return element.name
+                return polygon.name
     return ''
 
 """ Output Functions """
@@ -80,7 +80,7 @@ class World:
 
         if self.rerender_bool:
             self.rerender_bool = False
-            camera.calculate(rubik.elements)
+            camera.calculate(rubik.elements | rubik.buttons)
 
 """ PyGame """
 
@@ -385,10 +385,10 @@ def main() -> None:
         screen.blit(textures['fade'], (0, 0))
 
         # objects output render
-        for element, render_points, color, depth in camera.order:
-            if element.visibility:
-                pygame.draw.polygon(screen, color[0], render_points)
-                pygame.draw.polygon(screen, color[1], render_points, 3)
+        for polygon in camera.order:
+            if polygon.visibility:
+                pygame.draw.polygon(screen, polygon.color, polygon.points)
+                pygame.draw.polygon(screen, polygon.outline_color, polygon.points, 3)
 
         # depending on current mode
         match var['mode']:

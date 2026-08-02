@@ -5,6 +5,17 @@ from convert_obj_fn import convert_obj
 from element_class import Element
 
 
+class Animation:
+    def __init__(self, button_name) -> None:
+        self.button_name =  button_name
+        self.button_direction = ''
+        self.rotation_angle = 0
+        self.xyz_direction = '',
+        self.rotation_coef = (),
+        self.rotation_blocks = [],
+
+
+
 class Rubik:
 
     blocks_x = ('112', '122', '132', '232', '332', '322', '312', '212', '222')
@@ -24,10 +35,10 @@ class Rubik:
         # colors
         self.__colors = self.__create_colors()
 
-        # elements
-        self.elements: dict = {}
-        self.__create_elements_cubes(obj_model)
-        self.__create_elements_buttons()
+        # elements and buttons
+        self.elements: dict = self.__create_elements_cubes(obj_model)
+        self.buttons: dict = self.__create_elements_buttons()
+
         # rubik`s state
         self.state: dict = {
             # first layer (front)
@@ -43,7 +54,7 @@ class Rubik:
             '321': 'cut_lb'    , '322': 'side_b'  , '323': 'cut_rb'    ,
             '331': 'corner_lbd', '332': 'cut_bd'  , '333': 'corner_rbd',
         }
-        self.__state_copy = copy.deepcopy(self.state)
+        self.original_state = copy.deepcopy(self.state)
         # solved or not
         self.solved: bool = False
         # shuffling the rubik
@@ -54,7 +65,7 @@ class Rubik:
 
     def shuffle(self):
         """ shuffle the rubik """
-        self.animation['button_name'] = random.choice(list(self.elements.values())[-20:]).name
+        self.animation['button_name'] = random.choice(list(self.buttons))
         self.animation['button_direction'] = random.choice(['l', 'r', 'u', 'd'])
 
 
@@ -93,7 +104,7 @@ class Rubik:
     def reset(self):
         for element in self.elements:
             self.elements[element].reset()
-        self.state = copy.deepcopy(self.__state_copy)
+        self.state = copy.deepcopy(self.original_state)
 
     def twist(self) -> None:
         """ makes one rotation of the rubik`s cube """
@@ -157,8 +168,11 @@ class Rubik:
         self.animation['rotation_coef'] = -1 if self.animation['button_direction'] in ['u', 'r'] else 1
 
     def __make_rotation(self):
-        _blocks, index, cof = self.animation['rotation_blocks'],self.animation['rotation_index'],self.animation['rotation_coef']
-        # rotation animation
+        _blocks = self.animation['rotation_blocks']
+        index = self.animation['rotation_index']
+        cof = self.animation['rotation_coef']
+
+        # rotation animation (every frame)
         if self.animation['rotation_angle'] < 90:
             if self.shuffle_val == 'fast':
                 _add_ang = 30
@@ -168,13 +182,18 @@ class Rubik:
                 self.elements[self.state[obj_location]].rotate( index, _add_ang * cof)
             self.animation['rotation_angle'] += _add_ang
             self.rerender_bool = True
+        # rewriting position (one time call)
         else:
-            # rewriting position
             _blocks.pop(-1)
             off_blocks = _blocks[2:] + _blocks[:2] if self.animation['button_direction'] in ['d', 'r'] else _blocks[-2:] + _blocks[:-2]
             place_save = []
-            for pl in _blocks:  place_save.append(self.state[pl])
-            for pl in off_blocks:  self.state[pl] = place_save.pop(0)
+            for pl in _blocks:  
+                place_save.append(self.state[pl])
+            for pl in off_blocks:  
+                self.state[pl] = place_save.pop(0)
+            # rewriting rotation
+            for obj_location in _blocks:
+                self.elements[self.state[obj_location]].rotate90(index)
             self.__animation_reset()
 
 
@@ -200,20 +219,17 @@ class Rubik:
                  int(colors[color][0][2] * 0.8)))
         return colors
 
-    def __create_elements_cubes(self, obj_model) -> None:
+    def __create_elements_cubes(self, obj_model) -> dict:
         """
         Creates cube parts of class Element
         Changes: updates self.elements (adds cube parts)
         """
         cube_color = ( 'red', 'orange' , 'blue', 'green', 'white', 'yellow')
-        def create_cube(_obj_name, points_offset, color_input):
+        def create_cube(points_offset, color_input):
             """ Helps to create cube """
 
             # converter
             points, colored_polygons = convert_obj(obj_model)
-
-            # color
-            colored_polygons: list = copy.deepcopy(colored_polygons)
 
             # list of colors cube would have
             exact_colors = []
@@ -221,75 +237,74 @@ class Rubik:
                 exact_colors.append(cube_color[num - 1])
 
             # make inside polygons black
-            for index, colored_polygon in enumerate(colored_polygons,1):
-                if colored_polygon[1] not in exact_colors:
-                    colored_polygon[1] = self.__colors['gray']
-                else:
+            for colored_polygon in colored_polygons:
+                if colored_polygon[1] in exact_colors:
                     colored_polygon[1] = self.__colors[colored_polygon[1]]
+                else:
+                    colored_polygon[1] = self.__colors['gray']
 
             # adding offset
-            points = copy.deepcopy(points)
             for index, point in enumerate(points):
                 points[index][0] += points_offset[0]
                 points[index][1] += points_offset[1]
                 points[index][2] += points_offset[2]
+
             # visibility
             visibility = True
 
-            return [_obj_name, colored_polygons, points, visibility]
+            return [colored_polygons, points, visibility]
 
         # creating Element objects (Rubik parts)
-        self.elements.update({
+        return {
             # FRONT
             # upper line
-            'corner_lfu': Element(*create_cube('corner_lfu', (-66, 66, 66), (1, 3, 5))),
-            'cut_fu'    : Element(*create_cube('cut_fu', (0, 66, 66), (1, 5))),
-            'corner_rfu': Element(*create_cube('corner_rfu', (66, 66, 66), (1, 4, 5))),
+            'corner_lfu': Element(*create_cube((-66, 66, 66), (1, 3, 5))),
+            'cut_fu'    : Element(*create_cube((0, 66, 66), (1, 5))),
+            'corner_rfu': Element(*create_cube((66, 66, 66), (1, 4, 5))),
             # middle line
-
-            'cut_lf'    : Element(*create_cube('cut_lf', (-66, 0, 66), (3, 1))),
-            'side_f'    : Element(*create_cube('side_f', (0, 0, 66), (1,))),
-            'cut_rf'    : Element(*create_cube('cut_rf', (66, 0, 66), (4, 1))),
+            'cut_lf'    : Element(*create_cube((-66, 0, 66), (3, 1))),
+            'side_f'    : Element(*create_cube((0, 0, 66), (1,))),
+            'cut_rf'    : Element(*create_cube((66, 0, 66), (4, 1))),
             # down line
-            'corner_lfd': Element(*create_cube('corner_lfd', (-66, -66, 66), (1, 3, 6))),
-            'cut_fd'    : Element(*create_cube('cut_fd', (0, -66, 66), (1, 6))),
-            'corner_rfd': Element(*create_cube('corner_rfd', (66, -66, 66), (1, 4, 6))),
+            'corner_lfd': Element(*create_cube((-66, -66, 66), (1, 3, 6))),
+            'cut_fd'    : Element(*create_cube((0, -66, 66), (1, 6))),
+            'corner_rfd': Element(*create_cube((66, -66, 66), (1, 4, 6))),
 
             # MIDDLE
             # upper line
-            'cut_lu'    : Element(*create_cube('cut_lu', (-66, 66, 0), (3, 5))),
-            'side_u'    : Element(*create_cube('side_u', (0, 66, 0), (5,))),
-            'cut_ru'    : Element(*create_cube('cut_ru', (66, 66, 0), (4, 5))),
+            'cut_lu'    : Element(*create_cube((-66, 66, 0), (3, 5))),
+            'side_u'    : Element(*create_cube((0, 66, 0), (5,))),
+            'cut_ru'    : Element(*create_cube((66, 66, 0), (4, 5))),
             # middle line
-            'side_l'    : Element(*create_cube('side_l', (-66, 0, 0), (3,))),
-            'cent_p'    : Element(*create_cube('cent_p', (0, 0, 0), ())),
-            'side_r'    : Element(*create_cube('side_r', (66, 0, 0), (4,))),
+            'side_l'    : Element(*create_cube((-66, 0, 0), (3,))),
+            'cent_p'    : Element(*create_cube((0, 0, 0), ())),
+            'side_r'    : Element(*create_cube((66, 0, 0), (4,))),
             # down line
-            'cut_ld'    : Element(*create_cube('cut_ld', (-66, -66, 0), (3, 6))),
-            'side_d'    : Element(*create_cube('side_d', (0, -66, 0), (6,))),
-            'cut_rd'    : Element(*create_cube('cut_rd', (66, -66, 0), (4, 6))),
+            'cut_ld'    : Element(*create_cube((-66, -66, 0), (3, 6))),
+            'side_d'    : Element(*create_cube((0, -66, 0), (6,))),
+            'cut_rd'    : Element(*create_cube((66, -66, 0), (4, 6))),
 
             # BACK
             # upper line
-            'corner_lbu': Element(*create_cube('corner_lbu', (-66, 66, -66), (2, 3, 5))),
-            'cut_bu'    : Element(*create_cube('cut_bu', (0, 66, -66), (2, 5))),
-            'corner_rbu': Element(*create_cube('corner_rbu', (66, 66, -66), (2, 4, 5))),
+            'corner_lbu': Element(*create_cube((-66, 66, -66), (2, 3, 5))),
+            'cut_bu'    : Element(*create_cube((0, 66, -66), (2, 5))),
+            'corner_rbu': Element(*create_cube((66, 66, -66), (2, 4, 5))),
             # middle line
-            'cut_lb'    : Element(*create_cube('cut_lb', (-66, 0, -66), (3, 2))),
-            'side_b'    : Element(*create_cube('side_b', (0, 0, -66), (2,))),
-            'cut_rb'    : Element(*create_cube('cut_rb', (66, 0, -66), (4, 2))),
+            'cut_lb'    : Element(*create_cube((-66, 0, -66), (3, 2))),
+            'side_b'    : Element(*create_cube((0, 0, -66), (2,))),
+            'cut_rb'    : Element(*create_cube((66, 0, -66), (4, 2))),
             # down line
-            'corner_lbd': Element(*create_cube('corner_lbd', (-66, -66, -66), (2, 3, 6))),
-            'cut_bd'    : Element(*create_cube('cut_bd', (0, -66, -66), (2, 6))),
-            'corner_rbd': Element(*create_cube('corner_rbd', (66, -66, -66), (2, 4, 6))),
-        })
+            'corner_lbd': Element(*create_cube((-66, -66, -66), (2, 3, 6))),
+            'cut_bd'    : Element(*create_cube((0, -66, -66), (2, 6))),
+            'corner_rbd': Element(*create_cube((66, -66, -66), (2, 4, 6))),
+        }
 
-    def __create_elements_buttons(self) -> None:
+    def __create_elements_buttons(self) -> dict:
         """
         Creates cube buttons of class Element
-        Changes: updates self.elements (adds buttons)
+        Changes: updates self.buttons
         """
-        def create_button(_obj_name, points_offset, direction):
+        def create_button(points_offset, direction):
             """ helps to create button """
             colored = (((1, 2, 3, 4), ((255, 255, 255), (255, 255, 255))),)
             cof = -1 if direction in ['b', 'l', 'd'] else 1
@@ -310,17 +325,19 @@ class Rubik:
                 _points[index][color_index[1]] += points_offset[1] * cof
                 _points[index][color_index[2]] += 100 * cof
             visibility = False
-            return [_obj_name, colored, _points, visibility]
+            return [colored, _points, visibility]
 
         # buttons
+        buttons = {}
         letter_list = (['u', 'l', 'd', 'r'], ['l', 'd', 'r', 'u'], ['d', 'r', 'u', 'l'], ['r', 'u', 'l', 'd'])
         for _index, side in enumerate(['f', 'r', 'b', 'l']):
             letter = letter_list[_index]
-            self.elements.update({
-                f'button_{side}m': Element(*create_button(f'button_{side}m', (0, 0), side)),
-                f'button_{side}{letter[0]}': Element(*create_button(f'button_{side}{letter[0]}', (0, 66), side)),
-                f'button_{side}{letter[1]}': Element(*create_button(f'button_{side}{letter[1]}', (-66, 0), side)),
-                f'button_{side}{letter[2]}': Element(*create_button(f'button_{side}{letter[2]}', (0, -66), side)),
-                f'button_{side}{letter[3]}': Element(*create_button(f'button_{side}{letter[3]}', (66, 0), side)),
+            buttons.update({
+                f'button_{side}m'          : Element(*create_button((  0,  0), side)),
+                f'button_{side}{letter[0]}': Element(*create_button((  0, 66), side)),
+                f'button_{side}{letter[1]}': Element(*create_button((-66,  0), side)),
+                f'button_{side}{letter[2]}': Element(*create_button((  0,-66), side)),
+                f'button_{side}{letter[3]}': Element(*create_button(( 66,  0), side)),
             })
+        return buttons
 
