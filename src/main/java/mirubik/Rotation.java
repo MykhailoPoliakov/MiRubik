@@ -6,24 +6,14 @@ enum Cord {
     Z
 }
 
-enum Pos {
-    MIN(-1),
-    CEN(0),
-    PLS(1);
+public record Rotation(Cord cord, int offset, boolean positive) {}
 
-    private final int value;
 
-    Pos(int value) {
-        this.value = value;
-    }
-
-    int get() {
-        return value;
-    }
-}
-
-public class Rotation {
-    Cord cord;
-    Pos pos;
-    boolean positive;
+enum Dir {
+    F,
+    B,
+    L,
+    R,
+    U,
+    D
 }

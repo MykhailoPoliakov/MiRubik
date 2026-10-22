@@ -1,0 +1,1 @@
+1. rubik.getSide(DirF, DirD, DirR) should return color of that side
