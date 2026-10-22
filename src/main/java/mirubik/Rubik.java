@@ -20,38 +20,70 @@ public class Rubik {
             newSides[i] = sides[i].clone();
         }
 
-        // make rotation`
+        // make rotation
         int[] indV = new int[]{1+rot.offset(), 4+rot.offset(), 7+rot.offset()};
         int[] indH = new int[]{3+rot.offset()*3, 4+rot.offset()*3, 5+rot.offset()*3};
-        int[] indVInvV = new int[]{7+rot.offset(), 4+rot.offset(), 1+rot.offset()};
-        int[] indHInvH = new int[]{5+rot.offset()*3, 4+rot.offset()*3, 3+rot.offset()*3};
-        int[] indVInvH = new int[]{1-rot.offset(), 4-rot.offset(), 7-rot.offset()};
-        int[] indVInvHV = new int[]{7-rot.offset(), 4-rot.offset(), 1-rot.offset()};
-        int[] indHInvV = new int[]{3-rot.offset()*3, 4-rot.offset()*3, 5-rot.offset()*3};
-        int[] indHInvHV = new int[]{5-rot.offset()*3, 4-rot.offset()*3, 3-rot.offset()*3};
+        int[] indVInv = new int[]{7-rot.offset(), 4-rot.offset(), 1-rot.offset()};
+        int[] indHInv = new int[]{5-rot.offset()*3, 4-rot.offset()*3, 3-rot.offset()*3};
         
+        
+
+
         int[] s;
         int[][] indList;
         
         switch (rot.cord()) {
             case X -> { // X
                 s = rot.positive() ? new int[]{3, 4, 1, 5, 3} : new int[]{3, 5, 1, 4, 3};
-                indList = new int[][]{null, indVInvHV, null, indV, indH, indHInvHV};
+                indList = new int[][]{null, indVInv, null, indV, indH, indHInv};
             }
             case Y -> { // Y
                 s = rot.positive() ? new int[]{0, 4, 2, 5, 0} : new int[]{0, 5, 2, 4, 0};
-                indList = new int[][]{indV, null, indVInvHV, null, indV, indVInvHV};
+                indList = new int[][]{indV, null, indVInv, null, indV, indVInv};
             }
             default -> { // Z
                 s = rot.positive() ? new int[]{0, 1, 2, 3, 0} : new int[]{0, 3, 2, 1, 0};
-                indList = new int[][]{indV, indV, indV, indV, null, null};
+                indList = new int[][]{indH, indH, indH, indH, null, null};
             }
 
         }
 
         for (int i = 0; i <= 3; i++) {
             for (int j = 0; j < 3; j++) {
-                newSides[s[i]][indList[s[i]][j]] = this.sides[s[i+1]][indList[s[i+1]][j]];
+                newSides[s[i+1]][indList[s[i+1]][j]] = this.sides[s[i]][indList[s[i]][j]];
+            }
+        }
+
+        
+        if (rot.offset() != 0) {
+            int rotating_side;
+            int[] rotating;
+            int[] left  = new int[]{2, 5, 8, 1, 4, 7, 0 ,3 ,6};
+            int[] right = new int[]{6, 3, 0, 7, 4, 1, 8 ,5 ,2};
+
+            if (rot.cord() == Cord.X && rot.offset() == -1) {
+                rotating_side = 0;
+                rotating = rot.positive() ? left : right;
+            } else if (rot.cord() == Cord.X && rot.offset() == 1) {
+                rotating_side = 2;
+                rotating = rot.positive() ? right : left;
+            } else if (rot.cord() == Cord.Y && rot.offset() == 1) {
+                rotating_side = 3;
+                rotating = rot.positive() ? right : left;
+            } else if (rot.cord() == Cord.Y && rot.offset() == -1) {
+                rotating_side = 1;
+                rotating = rot.positive() ? left : right;
+            } else if (rot.cord() == Cord.Z && rot.offset() == -1) {
+                rotating_side = 4;
+                rotating = rot.positive() ? right : left;
+            } else {
+                rotating_side = 5;
+                rotating = rot.positive() ? left : right;
+            }
+
+
+            for (int i = 0; i < 9; i++) {
+                newSides[rotating_side][i] = this.sides[rotating_side][rotating[i]];
             }
         }
 
