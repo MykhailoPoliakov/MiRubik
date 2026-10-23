@@ -7,16 +7,16 @@ public class Main {
         System.out.println("Solved: " + rubik.isSolved());
 
         rubik.rotate(new Rotation(Cord.Y,1, true));
-        rubik.rotate(new Rotation(Cord.Z, -1, true));
-        rubik.rotate(new Rotation(Cord.Y,1, false));
-        rubik.rotate(new Rotation(Cord.Z, -1, false));
-        rubik.rotate(new Rotation(Cord.Y,1, true));
-        rubik.rotate(new Rotation(Cord.Z, -1, true));
-        rubik.rotate(new Rotation(Cord.Y,1, false));
-        rubik.rotate(new Rotation(Cord.Z, -1, false));
+        // rubik.rotate(new Rotation(Cord.Z, -1, true));
+        // rubik.rotate(new Rotation(Cord.Y,1, false));
+        // rubik.rotate(new Rotation(Cord.Z, -1, false));
+        // rubik.rotate(new Rotation(Cord.Y,1, true));
+        // rubik.rotate(new Rotation(Cord.Z, -1, true));
+        // rubik.rotate(new Rotation(Cord.Y,1, false));
+        // rubik.rotate(new Rotation(Cord.Z, -1, false));
         // rubik.rotate(new Rotation(Cord.X, -1, false));
 
-
+        System.out.println(rubik.getSquare(0, 1, 1));
 
 
         System.out.println("Solved: " + rubik.isSolved());
