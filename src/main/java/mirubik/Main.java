@@ -3,29 +3,25 @@ package mirubik;
 public class Main {
     public static void main(String[] args) {
         Rubik rubik = new Rubik();
+        Render render = new Render();
 
         System.out.println("Solved: " + rubik.isSolved());
 
-        rubik.rotate(new Rotation(Cord.Y,1, true));
-        // rubik.rotate(new Rotation(Cord.Z, -1, true));
-        // rubik.rotate(new Rotation(Cord.Y,1, false));
-        // rubik.rotate(new Rotation(Cord.Z, -1, false));
-        // rubik.rotate(new Rotation(Cord.Y,1, true));
-        // rubik.rotate(new Rotation(Cord.Z, -1, true));
-        // rubik.rotate(new Rotation(Cord.Y,1, false));
-        // rubik.rotate(new Rotation(Cord.Z, -1, false));
-        // rubik.rotate(new Rotation(Cord.X, -1, false));
-
-        System.out.println(rubik.getSquare(0, 1, 1));
+        rubik.rotateRel(0, 1);
 
 
-        System.out.println("Solved: " + rubik.isSolved());
-        for (int[] side : rubik.sides) {
-            for (int i = 0; i < 3; i++) {
-                System.out.println(side[i*3] + " " + side[i*3 + 1] + " " + side[i*3 + 2]);
-            }
-            System.out.println();
-            
-        }
+        render.print(rubik);
+
+        System.out.println();
+
+        render.printRel(rubik, 0);
+
+        int[] line = rubik.sides[0].getLine(Dir.D);
+        System.out.println(" " + line[0] + " " + line[1] + " " + line[2]);
+
+        render.printSide(rubik.sides[0]);
+        render.printSide(rubik.sides[0].rotate(1));
+
+
     }
 }
