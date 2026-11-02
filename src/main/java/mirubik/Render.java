@@ -36,7 +36,7 @@ public class Render {
         rotSides[2] = rubik.getRelSide(sideIndex, dirs[2]).rotate(1);
         rotSides[3] = rubik.getRelSide(sideIndex, dirs[3]);
         rotSides[4] = rubik.getRelSide(sideIndex, dirs[4]).rotate(2);
-        rotSides[5] = rubik.getRelSide(sideIndex, dirs[5]);
+        rotSides[5] = rubik.getRelSide(sideIndex, dirs[5]).rotate('H'); 
 
         for (int i = 0; i < 3; i++) {
             System.out.println("       " + niceLine(rotSides[3], i));

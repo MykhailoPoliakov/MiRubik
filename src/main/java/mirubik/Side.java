@@ -20,7 +20,24 @@ public class Side {
         
     }
 
-    Side mirrorV() {
+
+    Side rotate(int count) {
+        if (count == 0) return this;
+        if (count == 'H') return this.mirrorH();
+        if (count == 'V') return this.mirrorV();
+        if (count > 50 || count < -50) throw new IllegalArgumentException();
+
+        Side side = this.copy();
+        if (count < 0) {
+            for (int i = 0; i < -count; i++) { side = side.rotateOnce(false); }
+        } else {
+            for (int i = 0; i < count; i++)  { side = side.rotateOnce(true);  }
+        }
+        return side;
+    }
+
+    
+    private Side mirrorV() {
         Side side = this.copy();
         side.sq[0] = this.sq[6];
         side.sq[1] = this.sq[7];
@@ -31,7 +48,8 @@ public class Side {
         return side;
     }
 
-    Side mirrorH() {
+
+    private Side mirrorH() {
         Side side = this.copy();
         side.sq[0] = this.sq[2];
         side.sq[3] = this.sq[5];
@@ -43,25 +61,7 @@ public class Side {
     }
 
 
-    Side rotate(int count) {
-        if (count == 0) return this;
-
-        Side side = this.copy();
-
-        if (count < 0) {
-            for (int i = 0; i < -count; i++) {
-                side = side.rotate(false);
-            }
-        } else {
-            for (int i = 0; i < count; i++) {
-                side = side.rotate(true);
-            }
-        }
-        return side;
-    }
-
-
-    Side rotate(boolean clockwise) {
+    private Side rotateOnce(boolean clockwise) {
         Side side = this.copy();
         int [] rotating = (clockwise)? new int[]{6, 3, 0, 7, 4, 1, 8 ,5 ,2} : new int[]{2, 5, 8, 1, 4, 7, 0 ,3 ,6};
 

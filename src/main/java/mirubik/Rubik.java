@@ -42,7 +42,7 @@ public class Rubik {
         
 
         if (count > 0) {
-            Dir[] DirIndexes = new Dir[]{Dir.L, Dir.U, Dir.R, Dir.D,  Dir.L, Dir.U, Dir.R, Dir.D };
+            Dir[] DirIndexes = new Dir[]{ Dir.L, Dir.D, Dir.R, Dir.U,  Dir.L, Dir.D, Dir.R, Dir.U };
 
             for (int i = 0; i < 4; i++) {
                 int rotSideIndex = this.getRelSideIndex(sideIndex, DirIndexes[i]);
@@ -81,8 +81,11 @@ public class Rubik {
 
 
     int getRelSideIndex(int sideIndex, Dir dir) {
+        if (dir == Dir.F) { return sideIndex; }
+
         int[] sideIndexes;
         switch (sideIndex) {
+            //                                    L  R  U  D  B
             case 0  -> { sideIndexes = new int[]{ 1, 3, 4, 5, 2}; }
             case 1  -> { sideIndexes = new int[]{ 0, 2, 4, 5, 3}; }
             case 2  -> { sideIndexes = new int[]{ 3, 1, 4, 5, 0}; }
@@ -103,7 +106,7 @@ public class Rubik {
     Side getRelRotation(int sideIndex, Dir dir, boolean reverse) {
         int[] rotationCounts;
         switch (sideIndex) {
-            // L R U D
+            //                                       L  R  U  D
             case 0  -> { rotationCounts = new int[]{ 1,-1, 0, 0}; }
             case 1  -> { rotationCounts = new int[]{ 1,-1,-1, 1}; }
             case 2  -> { rotationCounts = new int[]{ 1,-1, 2, 2}; }
@@ -119,7 +122,7 @@ public class Rubik {
                 case R  -> { return this.sides[sideIndex].rotate(rotationCounts[1]); }
                 case U  -> { return this.sides[sideIndex].rotate(rotationCounts[2]); }
                 case D  -> { return this.sides[sideIndex].rotate(rotationCounts[3]); }
-                default -> { return this.sides[sideIndex].mirrorH(); }
+                default -> { return this.sides[sideIndex].rotate('H'); }
             }
         } else {
             switch (dir) {
@@ -128,7 +131,7 @@ public class Rubik {
                 case R  -> { return this.sides[sideIndex].rotate(-rotationCounts[1]); }
                 case U  -> { return this.sides[sideIndex].rotate(-rotationCounts[2]); }
                 case D  -> { return this.sides[sideIndex].rotate(-rotationCounts[3]); }
-                default -> { return this.sides[sideIndex].mirrorH(); }
+                default -> { return this.sides[sideIndex].rotate('H'); }
             }
         }
     }
